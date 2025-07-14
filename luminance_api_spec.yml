@@ -1,0 +1,1027 @@
+openapi: 3.0.3
+info:
+  title: Luminance API
+  description: |
+    Luminance offers a RESTful HTTP-based API utilizing JSON as the primary serialization format and OAuth2 for authentication. 
+    This API is engineered to seamlessly integrate your software with the Luminance Platform, leveraging its objects and endpoints to enhance your applications.
+    
+    With this API, you can create integrations that allow direct access to folders, tasks, and documents stored in Luminance. 
+    Additionally, you can track document progress through reviews or utilize machine learning capabilities via annotations and Traffic Light Analysis.
+    
+    The Luminance API is designed with developers in mind, providing comprehensive documentation and robust support to ensure smooth integration. 
+    It adheres to industry standards, ensuring compatibility and security. Developers can take advantage of the API's flexibility to build custom solutions, 
+    automate workflows, and enhance overall efficiency within their applications.
+    
+    **API requests are rate limited for security reasons to 100 requests every 10 minutes.**
+    
+    ## Objects
+    - **Accounts:** These actions are made at the top Account-level of Luminance, which requires Administrator permissions for the Service user performing the action
+    - **Users:** This refers to the users on your Luminance account. Their level of access will depend on their permissions.
+    - **Projects:** This refers to the different projects that are stored within your Luminance account.
+    - **Tasks:** Tasks are collections of documents within a project that can be assigned to a subset of users.
+    - **Reviews:** This refers to the 'review' object created to track review status of documents by users within a task, and store AI outputs from Traffic Light Analysis through a Knowledge Bank.
+    - **Folders:** This refers to the folders the documents are stored in within the project.
+    - **Documents:** These are the documents on your Luminance account. Documents can be accessed via their projects, folders or the tasks they have been added into.
+    - **Annotations:** Annotations refer to all the types of data tags that can be added to a document. They can be accessed via the document they are on via the document's project, folder, or task.
+    - **Matters:** Matters are containers used in live negotiations to store document versioning information and assist in managing workflows. Our matter endpoints allow for management of these matters, including data tags associated with these matters, programmatically
+    - **Matter Versions:** An object referencing a single document in a matter. This could be single draft of a contract or a related document such as an attachment.
+    - **Traffic Light Analysis:** The Traffic Light Analysis endpoint is able to trigger analysis of a document using Luminance's AI analysis tool to see how compliant the clauses in a document are with your standard positioning
+    - **Contract Creation:** Get information on, and create contracts with a new associated matter using the templates hosted in a particular division by calling these endpoints.
+  version: 1.4.0
+  contact:
+    name: Luminance Technologies
+servers:
+  - url: https://api.luminance.com
+    description: Production server
+  - url: https://api-staging.luminance.com
+    description: Staging server
+security:
+  - OAuth2: []
+
+paths:
+  /:
+    get:
+      summary: Get System Data
+      description: This endpoint provides system data, including Luminance version, API2 version, and product type.
+      tags:
+        - System
+      responses:
+        '200':
+          description: JSON object of system data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users:
+    get:
+      summary: Get Users Collection
+      description: This endpoint provides a list of users available on the environment. Only Service Users with Administrator level permissions can access this list.
+      tags:
+        - Users
+      parameters:
+        - name: id
+          in: query
+          description: Unique User ID
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: Maximum number of objects that can be retrieved
+          schema:
+            type: integer
+            default: 50
+        - name: created_at
+          in: query
+          description: Time of Creation
+          schema:
+            type: string
+            format: date-time
+        - name: created_by
+          in: query
+          description: User ID of Creator
+          schema:
+            type: integer
+        - name: username
+          in: query
+          description: Username used in login credentials
+          schema:
+            type: string
+        - name: account_id
+          in: query
+          description: ID of Associated Account this User is Added to
+          schema:
+            type: integer
+        - name: state
+          in: query
+          description: Current State of User
+          schema:
+            type: string
+            enum: [active, inactive]
+            default: active
+        - name: multi_factor_auth_enabled
+          in: query
+          description: If true MFA is Enabled for this User
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: JSON array of Users or single JSON user object if user ID is referenced in path
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                  - $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/me:
+    get:
+      summary: Get Information on the User being used for Authentication
+      description: Get information about the currently authenticated user
+      tags:
+        - Users
+      responses:
+        '200':
+          description: JSON array of Users or single JSON user object if user ID is referenced in path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{user-id}:
+    get:
+      summary: Get a specific user
+      description: Get a user with the specific user id provided
+      tags:
+        - Users
+      parameters:
+        - name: user-id
+          in: path
+          required: true
+          description: User ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of Users or single JSON user object if user ID is referenced in path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /annotation_types:
+    get:
+      summary: Get Annotation Types
+      description: Get Annotation Types that have been created on your instance as a whole.
+      tags:
+        - Annotation Types
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of objects that can be retrieved
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of annotationType objects available in the instance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnnotationType'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /annotation_types/{annotation-type-id}:
+    get:
+      summary: Get information on a specific Annotation Type ID
+      description: Get information on a specific annotation type
+      tags:
+        - Annotation Types
+      parameters:
+        - name: annotation-type-id
+          in: path
+          required: true
+          description: Annotation Type ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of annotationType objects available in the instance, or a single JSON annotationSource object if annotationTypeId is referenced in the path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnotationType'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /annotation_sources:
+    get:
+      summary: Get Annotation Sources
+      description: Get information on annotation sources. Each annotation_source can be used to populate values users are able to select from in-platform when interacting with Matters
+      tags:
+        - Annotation Sources
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of objects that can be retrieved
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of annotationSource objects available in the instance
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AnnotationSource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create a new annotation_source
+      description: Create a new annotation source
+      tags:
+        - Annotation Sources
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnotationSourceCreate'
+      responses:
+        '201':
+          description: JSON object of an AnnotationsSource after POSTing to create one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnotationSource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /annotation_sources/{annotation-source-id}:
+    get:
+      summary: Get information on a particular annotation_source_id
+      description: Get information on a particular annotation_source_id. Each annotation_source can be used to populate values users are able to select from in-platform when interacting with Matters
+      tags:
+        - Annotation Sources
+      parameters:
+        - name: annotation-source-id
+          in: path
+          required: true
+          description: Annotation Source ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of annotationSource objects available in the instance, or a single JSON annotationSource object if annotationSourceId is referenced in the path
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnotationSource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      summary: Modify annotation_sources
+      description: Modify an existing annotation source
+      tags:
+        - Annotation Sources
+      parameters:
+        - name: annotation-source-id
+          in: path
+          required: true
+          description: Annotation Source ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnotationSourceUpdate'
+      responses:
+        '200':
+          description: JSON object or array of JSON objects of AnnotationSources after PATCHing to modify one or more AnnotationSource objects
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnnotationSource'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /projects:
+    get:
+      summary: Get Projects
+      description: Get a list of projects available in the environment
+      tags:
+        - Projects
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of objects that can be retrieved
+          schema:
+            type: integer
+        - name: id
+          in: query
+          description: Project ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /projects/{project-id}:
+    get:
+      summary: Get a specific project
+      description: Get information about a specific project
+      tags:
+        - Projects
+      parameters:
+        - name: project-id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON object of project
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks:
+    get:
+      summary: Get Tasks
+      description: Get a list of tasks available in the environment
+      tags:
+        - Tasks
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of objects that can be retrieved
+          schema:
+            type: integer
+        - name: project_id
+          in: query
+          description: Filter by project ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{task-id}:
+    get:
+      summary: Get a specific task
+      description: Get information about a specific task
+      tags:
+        - Tasks
+      parameters:
+        - name: task-id
+          in: path
+          required: true
+          description: Task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON object of task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /documents:
+    get:
+      summary: Get Documents
+      description: Get a list of documents available in the environment
+      tags:
+        - Documents
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of objects that can be retrieved
+          schema:
+            type: integer
+        - name: project_id
+          in: query
+          description: Filter by project ID
+          schema:
+            type: integer
+        - name: task_id
+          in: query
+          description: Filter by task ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of documents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /documents/{document-id}:
+    get:
+      summary: Get a specific document
+      description: Get information about a specific document
+      tags:
+        - Documents
+      parameters:
+        - name: document-id
+          in: path
+          required: true
+          description: Document ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON object of document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /matters:
+    get:
+      summary: Get Matters
+      description: Get a list of matters available in the environment
+      tags:
+        - Matters
+      parameters:
+        - name: limit
+          in: query
+          description: Maximum number of objects that can be retrieved
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON array of matters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Matter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /matters/{matter-id}:
+    get:
+      summary: Get a specific matter
+      description: Get information about a specific matter
+      tags:
+        - Matters
+      parameters:
+        - name: matter-id
+          in: path
+          required: true
+          description: Matter ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: JSON object of matter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Matter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    OAuth2:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://api.luminance.com/oauth/token
+          scopes:
+            read: Read access to all resources
+            write: Write access to all resources
+            admin: Administrative access
+
+  schemas:
+    SystemData:
+      type: object
+      properties:
+        version:
+          type: number
+          description: Luminance version
+        api2_version:
+          type: number
+          description: API2 version
+        product:
+          type: string
+          description: Product type
+      required:
+        - version
+        - api2_version
+        - product
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique user ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        username:
+          type: string
+          description: Username used in login credentials
+        name:
+          type: string
+          description: User's display name
+        email:
+          type: string
+          nullable: true
+          description: User's email address
+        account_id:
+          type: integer
+          description: ID of associated account
+        state:
+          type: string
+          enum: [active, inactive]
+          description: Current state of user
+        multi_factor_auth_enabled:
+          type: boolean
+          description: Whether MFA is enabled for this user
+      required:
+        - id
+        - created_at
+        - username
+        - name
+        - account_id
+        - state
+        - multi_factor_auth_enabled
+
+    AnnotationType:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique annotation type ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        created_by:
+          type: integer
+          description: User ID of creator
+        type:
+          type: string
+          description: Type of data stored by the annotation
+        key:
+          type: string
+          nullable: true
+          description: Key used to identify the annotation
+        pre_built:
+          type: boolean
+          description: Whether this annotation reflects an out-of-the-box Luminance concept
+        name:
+          type: string
+          nullable: true
+          description: The display name for the annotation in platform
+        options:
+          type: object
+          description: Options associated with the annotation
+      required:
+        - id
+        - created_at
+        - created_by
+        - type
+        - pre_built
+        - options
+
+    AnnotationSource:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique annotation source ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        created_by:
+          type: integer
+          description: User ID of creator
+        annotation_type_id:
+          type: integer
+          description: Associated annotation type ID
+        value:
+          type: string
+          description: The value of the annotation source
+        description:
+          type: string
+          nullable: true
+          description: Description of the annotation source
+      required:
+        - id
+        - created_at
+        - created_by
+        - annotation_type_id
+        - value
+
+    AnnotationSourceCreate:
+      type: object
+      properties:
+        annotation_type_id:
+          type: integer
+          description: Associated annotation type ID
+        value:
+          type: string
+          description: The value of the annotation source
+        description:
+          type: string
+          description: Description of the annotation source
+      required:
+        - annotation_type_id
+        - value
+
+    AnnotationSourceUpdate:
+      type: object
+      properties:
+        value:
+          type: string
+          description: The value of the annotation source
+        description:
+          type: string
+          description: Description of the annotation source
+      required:
+        - value
+
+    Project:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique project ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        name:
+          type: string
+          description: Project name
+        description:
+          type: string
+          nullable: true
+          description: Project description
+        state:
+          type: string
+          enum: [active, inactive]
+          description: Project state
+      required:
+        - id
+        - created_at
+        - name
+        - state
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique task ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        project_id:
+          type: integer
+          description: Associated project ID
+        name:
+          type: string
+          description: Task name
+        description:
+          type: string
+          nullable: true
+          description: Task description
+        state:
+          type: string
+          enum: [active, inactive]
+          description: Task state
+      required:
+        - id
+        - created_at
+        - project_id
+        - name
+        - state
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique document ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        project_id:
+          type: integer
+          description: Associated project ID
+        task_id:
+          type: integer
+          nullable: true
+          description: Associated task ID
+        name:
+          type: string
+          description: Document name
+        file_size:
+          type: integer
+          description: File size in bytes
+        mime_type:
+          type: string
+          description: MIME type of the document
+        state:
+          type: string
+          enum: [active, inactive]
+          description: Document state
+      required:
+        - id
+        - created_at
+        - project_id
+        - name
+        - file_size
+        - mime_type
+        - state
+
+    Matter:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique matter ID
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp
+        name:
+          type: string
+          description: Matter name
+        description:
+          type: string
+          nullable: true
+          description: Matter description
+        state:
+          type: string
+          enum: [active, inactive]
+          description: Matter state
+      required:
+        - id
+        - created_at
+        - name
+        - state
+
+  responses:
+    Unauthorized:
+      description: Unauthorized - the authentication provided was invalid
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: ""
+
+    Forbidden:
+      description: Forbidden - the authenticated user does not have sufficient permissions to perform this action
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: ""
+
+    MethodNotAllowed:
+      description: Method not allowed (calling api with wrong method)
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: ""
+
+    UnprocessableEntity:
+      description: Unprocessable Entity - the request was well formed, but not processable
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: ""
+
+    TooManyRequests:
+      description: Too many requests have been sent to the server over a given time period. Please contact Luminance's support team.
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: ""
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        text/plain:
+          schema:
+            type: string
+            example: ""

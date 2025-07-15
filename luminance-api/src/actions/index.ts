@@ -1,5 +1,4 @@
 import { buildRawRequestAction } from "@prismatic-io/spectral/dist/clients/http";
-import { baseUrl } from "../client";
 import system from "./system";
 import users from "./users";
 import annotationTypes from "./annotationTypes";
@@ -18,5 +17,5 @@ export default {
   ...tasks,
   ...documents,
   ...matters,
-  rawRequest: buildRawRequestAction(baseUrl),
+  rawRequest: buildRawRequestAction("https://api.luminance.com"),
 };

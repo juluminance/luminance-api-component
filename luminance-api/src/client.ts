@@ -5,7 +5,20 @@ import {
 } from "@prismatic-io/spectral/dist/clients/http";
 import { oAuth2 } from "./connections";
 
-export const baseUrl = "https://api.luminance.com";
+const extractBaseUrlFromTokenUrl = (tokenUrl: string): string => {
+  try {
+    const url = new URL(tokenUrl);
+    const hostname = url.hostname;
+    
+    // Extract subdomain (everything before the first dot)
+    const subdomain = hostname.split('.')[0];
+    
+    // Construct the API base URL with the subdomain
+    return `https://${subdomain}.app.luminance.com/api2`;
+  } catch (error) {
+    throw new Error(`Invalid token URL format: ${tokenUrl}`);
+  }
+};
 
 const toAuthorizationHeaders = (
   connection: Connection
@@ -41,6 +54,15 @@ export const createClient = (
       `Received unexpected connection type: ${connection.key}`
     );
   }
+
+  // Extract the token URL from the connection
+  const tokenUrl = util.types.toString(connection.fields?.tokenUrl);
+  if (!tokenUrl) {
+    throw new Error("Token URL is required but not provided");
+  }
+
+  // Generate the base URL from the token URL
+  const baseUrl = extractBaseUrlFromTokenUrl(tokenUrl);
 
   const client = createHttpClient({
     baseUrl,

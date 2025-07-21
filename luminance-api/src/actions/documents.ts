@@ -3,13 +3,13 @@ import { createClient } from "../client";
 
 const getDocuments = action({
   display: {
-    label: "Get Documents",
-    description: "Get Documents",
+    label: "Get Documents for Project",
+    description: "Get Documents for a specific project",
   },
-  perform: async (context, { connection, limit, projectId, taskId }) => {
+  perform: async (context, { connection, projectId, limit, taskId }) => {
     const client = createClient(connection);
-    const { data } = await client.get(`/documents`, {
-      params: { limit, project_id: projectId, task_id: taskId },
+    const { data } = await client.get(`/projects/${projectId}/documents`, {
+      params: { limit, task_id: taskId },
     });
     return { data };
   },
@@ -18,6 +18,13 @@ const getDocuments = action({
       label: "Connection",
       type: "connection",
       required: true,
+    }),
+    projectId: input({
+      label: "Project Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
     }),
     limit: input({
       label: "Limit",
@@ -28,16 +35,6 @@ const getDocuments = action({
           ? util.types.toNumber(value)
           : undefined,
       comments: "Maximum number of objects that can be retrieved",
-    }),
-    projectId: input({
-      label: "Project Id",
-      type: "string",
-      required: false,
-      clean: (value): number | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toNumber(value)
-          : undefined,
-      comments: "Filter by project ID",
     }),
     taskId: input({
       label: "Task Id",
@@ -54,12 +51,12 @@ const getDocuments = action({
 
 const getDocumentsDocumentId = action({
   display: {
-    label: "Get Documents Document Id",
-    description: "Get a specific document",
+    label: "Get Document by ID",
+    description: "Get a specific document in a project",
   },
-  perform: async (context, { connection, documentId }) => {
+  perform: async (context, { connection, projectId, documentId }) => {
     const client = createClient(connection);
-    const { data } = await client.get(`/documents/${documentId}`);
+    const { data } = await client.get(`/projects/${projectId}/documents/${documentId}`);
     return { data };
   },
   inputs: {
@@ -67,6 +64,13 @@ const getDocumentsDocumentId = action({
       label: "Connection",
       type: "connection",
       required: true,
+    }),
+    projectId: input({
+      label: "Project Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
     }),
     documentId: input({
       label: "Document Id",

@@ -544,21 +544,22 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /documents:
+  /projects/{project-id}/documents:
     get:
-      summary: Get Documents
-      description: Get a list of documents available in the environment
+      summary: Get Documents for a Project
+      description: Get a list of documents available in the specified project
       tags:
         - Documents
       parameters:
+        - name: project-id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
         - name: limit
           in: query
           description: Maximum number of objects that can be retrieved
-          schema:
-            type: integer
-        - name: project_id
-          in: query
-          description: Filter by project ID
           schema:
             type: integer
         - name: task_id
@@ -588,13 +589,19 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /documents/{document-id}:
+  /projects/{project-id}/documents/{document-id}:
     get:
       summary: Get a specific document
-      description: Get information about a specific document
+      description: Get information about a specific document in the specified project
       tags:
         - Documents
       parameters:
+        - name: project-id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
         - name: document-id
           in: path
           required: true
@@ -621,13 +628,19 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /matters:
+  /projects/{project-id}/matters:
     get:
-      summary: Get Matters
-      description: Get a list of matters available in the environment
+      summary: Get Matters for a Project
+      description: Get a list of matters available in the specified project
       tags:
         - Matters
       parameters:
+        - name: project-id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
         - name: limit
           in: query
           description: Maximum number of objects that can be retrieved
@@ -654,14 +667,57 @@ paths:
           $ref: '#/components/responses/TooManyRequests'
         '500':
           $ref: '#/components/responses/InternalServerError'
-
-  /matters/{matter-id}:
-    get:
-      summary: Get a specific matter
-      description: Get information about a specific matter
+    post:
+      summary: Create a new matter
+      description: Create a new matter in the specified project
       tags:
         - Matters
       parameters:
+        - name: project-id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MatterCreate'
+      responses:
+        '201':
+          description: JSON object of a Matter after POSTing to create one
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Matter'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '405':
+          $ref: '#/components/responses/MethodNotAllowed'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /projects/{project-id}/matters/{matter-id}:
+    get:
+      summary: Get a specific matter
+      description: Get information about a specific matter in the specified project
+      tags:
+        - Matters
+      parameters:
+        - name: project-id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
         - name: matter-id
           in: path
           required: true
@@ -960,6 +1016,9 @@ components:
           type: string
           format: date-time
           description: Creation timestamp
+        project_id:
+          type: integer
+          description: Associated project ID
         name:
           type: string
           description: Matter name
@@ -974,8 +1033,21 @@ components:
       required:
         - id
         - created_at
+        - project_id
         - name
         - state
+
+    MatterCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Matter name
+        description:
+          type: string
+          description: Matter description
+      required:
+        - name
 
   responses:
     Unauthorized:

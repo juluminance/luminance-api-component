@@ -544,21 +544,22 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /documents:
+  /projects/{project-id}/documents:
     get:
-      summary: Get Documents
-      description: Get a list of documents available in the environment
+      summary: Get Documents for a Project
+      description: Get a list of documents available in the specified project
       tags:
         - Documents
       parameters:
+        - name: project-id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
         - name: limit
           in: query
           description: Maximum number of objects that can be retrieved
-          schema:
-            type: integer
-        - name: project_id
-          in: query
-          description: Filter by project ID
           schema:
             type: integer
         - name: task_id
@@ -588,13 +589,19 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /documents/{document-id}:
+  /projects/{project-id}/documents/{document-id}:
     get:
       summary: Get a specific document
-      description: Get information about a specific document
+      description: Get information about a specific document in the specified project
       tags:
         - Documents
       parameters:
+        - name: project-id
+          in: path
+          required: true
+          description: Project ID
+          schema:
+            type: integer
         - name: document-id
           in: path
           required: true

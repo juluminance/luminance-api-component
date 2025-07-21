@@ -3,12 +3,12 @@ import { createClient } from "../client";
 
 const getMatters = action({
   display: {
-    label: "Get Matters",
-    description: "Get Matters",
+    label: "Get Matters for Project",
+    description: "Get Matters for a specific project",
   },
-  perform: async (context, { connection, limit }) => {
+  perform: async (context, { connection, projectId, limit }) => {
     const client = createClient(connection);
-    const { data } = await client.get(`/matters`, { params: { limit } });
+    const { data } = await client.get(`/projects/${projectId}/matters`, { params: { limit } });
     return { data };
   },
   inputs: {
@@ -16,6 +16,13 @@ const getMatters = action({
       label: "Connection",
       type: "connection",
       required: true,
+    }),
+    projectId: input({
+      label: "Project Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
     }),
     limit: input({
       label: "Limit",
@@ -30,14 +37,17 @@ const getMatters = action({
   },
 });
 
-const getMattersMatterId = action({
+const createMatter = action({
   display: {
-    label: "Get Matters Matter Id",
-    description: "Get a specific matter",
+    label: "Create Matter",
+    description: "Create a new matter in a project",
   },
-  perform: async (context, { connection, matterId }) => {
+  perform: async (context, { connection, projectId, name, description }) => {
     const client = createClient(connection);
-    const { data } = await client.get(`/matters/${matterId}`);
+    const { data } = await client.post(`/projects/${projectId}/matters`, {
+      name,
+      description,
+    });
     return { data };
   },
   inputs: {
@@ -45,6 +55,56 @@ const getMattersMatterId = action({
       label: "Connection",
       type: "connection",
       required: true,
+    }),
+    projectId: input({
+      label: "Project Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
+    }),
+    name: input({
+      label: "Name",
+      type: "string",
+      required: true,
+      clean: (value): string => util.types.toString(value),
+      comments: "Matter name",
+    }),
+    description: input({
+      label: "Description",
+      type: "string",
+      required: false,
+      clean: (value): string | undefined =>
+        value !== undefined && value !== null
+          ? util.types.toString(value)
+          : undefined,
+      comments: "Matter description",
+    }),
+  },
+});
+
+const getMattersMatterId = action({
+  display: {
+    label: "Get Matter by ID",
+    description: "Get a specific matter in a project",
+  },
+  perform: async (context, { connection, projectId, matterId }) => {
+    const client = createClient(connection);
+    const { data } = await client.get(`/projects/${projectId}/matters/${matterId}`);
+    return { data };
+  },
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    projectId: input({
+      label: "Project Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
     }),
     matterId: input({
       label: "Matter Id",
@@ -58,5 +118,6 @@ const getMattersMatterId = action({
 
 export default {
   getMatters,
+  createMatter,
   getMattersMatterId,
 };

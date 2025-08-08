@@ -42,7 +42,7 @@ const getProjects = action({
 
 const getProjectsProjectId = action({
   display: {
-    label: "Get Projects Project Id",
+    label: "PROD Get Projects Project Id",
     description: "Get a specific project",
   },
   perform: async (context, { connection, projectId }) => {

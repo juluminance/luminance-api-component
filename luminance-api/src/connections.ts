@@ -14,7 +14,7 @@ export const oAuth2 = oauth2Connection({
       type: "string",
       required: true,
       shown: true,
-      default: "https://<your-domain>.app.luminance.com/oauth/token",
+      default: "https://<your-domain>.app.luminance.com/auth/oauth2/token",
       comments: "Token URL",
     },
 

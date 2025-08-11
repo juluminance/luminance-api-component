@@ -42,12 +42,9 @@ const createMatter = action({
     label: "Create Matter",
     description: "Create a new matter in a project",
   },
-  perform: async (context, { connection, projectId, name, description }) => {
+  perform: async (context, { connection, projectId, body }) => {
     const client = createClient(connection);
-    const { data } = await client.post(`/projects/${projectId}/matters`, {
-      name,
-      description,
-    });
+    const { data } = await client.post(`/projects/${projectId}/matters/create`, body);
     return { data };
   },
   inputs: {
@@ -63,22 +60,11 @@ const createMatter = action({
       clean: (value): number => util.types.toNumber(value),
       comments: "Project ID",
     }),
-    name: input({
-      label: "Name",
-      type: "string",
+    body: input({
+      label: "body",
+      type: "jsonForm",
       required: true,
-      clean: (value): string => util.types.toString(value),
-      comments: "Matter name",
-    }),
-    description: input({
-      label: "Description",
-      type: "string",
-      required: false,
-      clean: (value): string | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toString(value)
-          : undefined,
-      comments: "Matter description",
+      comments: "Request body as JSON object",
     }),
   },
 });

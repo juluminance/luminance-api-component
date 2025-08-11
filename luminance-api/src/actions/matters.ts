@@ -69,6 +69,63 @@ const createMatter = action({
   },
 });
 
+const uploadToMatter = action({
+  display: {
+    label: "Upload to Matter",
+    description: "Upload a file to a matter",
+  },
+  perform: async (context, { connection, projectId, folderId, matterId, name, body }) => {
+    const client = createClient(connection);
+    const { data } = await client.post(`/projects/${projectId}/folders/${folderId}/upload?matter_id=${matterId}&name=${name}&replace=true`, body, {
+      headers: {
+        'Content-Type': 'application/octet-stream'
+      }
+    });
+    return { data };
+  },
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    projectId: input({
+      label: "Project Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
+    }),
+    folderId: input({
+      label: "Folder Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Folder ID",
+    }),
+    matterId: input({
+      label: "Matter Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Matter ID",
+    }),
+    name: input({
+      label: "Name",
+      type: "string",
+      required: true,
+      clean: (value): string => util.types.toString(value),
+      comments: "Name of the file to upload",
+    }),
+    body: input({
+      label: "body",
+      type: "jsonForm",
+      required: false,
+      comments: "Request body as JSON object",
+    }),
+  },
+});
+
 const getMattersMatterId = action({
   display: {
     label: "Get Matter by ID",
@@ -106,4 +163,5 @@ export default {
   getMatters,
   createMatter,
   getMattersMatterId,
+  uploadToMatter,
 };

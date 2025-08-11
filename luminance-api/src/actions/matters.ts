@@ -71,7 +71,7 @@ const createMatter = action({
 
 const uploadToMatter = action({
   display: {
-    label: "Upload to Matter",
+    label: "Upload a file to a matter",
     description: "Upload a file to a matter",
   },
   perform: async (context, { connection, projectId, folderId, matterId, name, body }) => {
@@ -118,10 +118,11 @@ const uploadToMatter = action({
       comments: "Name of the file to upload",
     }),
     body: input({
-      label: "body",
-      type: "jsonForm",
-      required: false,
-      comments: "Request body as JSON object",
+      label: "Name",
+      type: "string",
+      required: true,
+      clean: (value): string => util.types.toString(value),
+      comments: "Base64 encoded file content",
     }),
   },
 });

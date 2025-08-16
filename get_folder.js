@@ -1,8 +1,10 @@
 module.exports = async (context, { connection, contextValue }) => {
+
+  client_creds = JSON.parse(contextValue)
   // Configuration
-  const BASE_URL = 'https://luminance-integrations-corporate.app.luminance.com';
-  const CLIENT_ID = 'a18b730bb0e94e6e9d85a2730a6ef29b';
-  const CLIENT_SECRET = 'ab242f41bbf247b8a68825b16661f751';
+  const BASE_URL = client_creds.baseurl;
+  const CLIENT_ID = client_creds.clientid;
+  const CLIENT_SECRET = client_creds.clientsecret;
 
   try {
     // Step 1: Get OAuth token
@@ -30,7 +32,7 @@ module.exports = async (context, { connection, contextValue }) => {
     const accessToken = tokenData.access_token;
 
     // Step 2: Get annotation types
-    const annotationsResponse = await fetch(`${BASE_URL}/api2/projects/${contextValue}/folders`, {
+    const annotationsResponse = await fetch(`${BASE_URL}/api2/projects/${client_creds.division}/folders`, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -57,6 +59,6 @@ module.exports = async (context, { connection, contextValue }) => {
     });
 
   } catch (error) {
-    throw new Error(`Error in annotation types lookup: ${contextValue}`);
+    throw new Error(`Error in annotation types lookup: ${client_creds.baseurl} ${error.message}`);
   }
 };

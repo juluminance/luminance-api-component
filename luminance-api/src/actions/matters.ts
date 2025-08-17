@@ -64,7 +64,46 @@ const createMatter = action({
       label: "body",
       type: "jsonForm",
       required: true,
-      comments: "Request body as JSON object",
+      comments: "Request body as JSON objects",
+    }),
+  },
+});
+
+const AddMatterInfo = action({
+  display: {
+    label: "Add Matter Info",
+    description: "Add Matter Info on an existing matter",
+  },
+  perform: async (context, { connection, projectId, matterId, body }) => {
+    const client = createClient(connection);
+    const { data } = await client.post(`/projects/${projectId}/matters/${matterId}/annotations`, body);
+    return { data };
+  },
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    projectId: input({
+      label: "Project Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
+    }),
+    matterId: input({
+      label: "Matter Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Matter ID",
+    }),
+    body: input({
+      label: "body",
+      type: "jsonForm",
+      required: true,
+      comments: "Request body as JSON objects",
     }),
   },
 });
@@ -165,4 +204,5 @@ export default {
   createMatter,
   getMattersMatterId,
   uploadToMatter,
+  AddMatterInfo
 };

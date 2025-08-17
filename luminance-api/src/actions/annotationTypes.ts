@@ -23,11 +23,16 @@ const getAnnotationTypes = action({
       label: "Limit",
       type: "string",
       required: false,
-      clean: (value): number | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toNumber(value)
-          : undefined,
-      comments: "Maximum number of objects that can be retrieved",
+      clean: (value): number | string | undefined => {
+        if (value === null || value === "null") {
+          return "null";
+        }
+        if (value !== undefined) {
+          return util.types.toNumber(value);
+        }
+        return undefined;
+      },
+      comments: "Maximum number of objects that can be retrieved. Use 'null' to get all results.",
     }),
   },
 });

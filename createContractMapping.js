@@ -21,35 +21,46 @@ module.exports = async ({ logger, configVars }, stepResults) => {
         return mappings.map(mapping => {
             const annotationTypeId = parseInt(mapping.luminanceFields);
             const salesforceFieldType = mapping.salesforceFieldType || 'text';
+            const luminanceFieldType = mapping.luminanceFieldType || 'text';
             
             // Get the actual value from the Salesforce opportunity data
-            const fieldValue = opportunityData[mapping.salesforceopportunityField];
+            let fieldValue = opportunityData[mapping.salesforceopportunityField];
             
-            // Create content object based on Salesforce field type
+            // Align types between Salesforce and Luminance
+            const alignedValue = alignFieldTypes(fieldValue, salesforceFieldType, luminanceFieldType);
+            
+            // Create content object based on aligned type
             let content = {};
             
-            switch(salesforceFieldType) {
-                case 'currency':
-                    content = {
-                        value: fieldValue || 0,
-                        currency: "USD"
-                    };
-                    break;
-                case 'timestamp':
-                    content = {
-                        timestamp: fieldValue || new Date().toISOString()
-                    };
-                    break;
-                case 'number':
-                    content = {
-                        value: fieldValue || 0
-                    };
-                    break;
-                default: // text and other types
-                    content = {
-                        value: fieldValue || ""
-                    };
-                    break;
+            // If Salesforce field is date or timestamp, always use timestamp content type
+            if (salesforceFieldType === 'date' || salesforceFieldType === 'timestamp') {
+                content = {
+                    timestamp: alignedValue || new Date().toISOString()
+                };
+            } else {
+                switch(luminanceFieldType) {
+                    case 'currency':
+                        content = {
+                            value: alignedValue.value || 0,
+                            currency: alignedValue.currency || "USD"
+                        };
+                        break;
+                    case 'timestamp':
+                        content = {
+                            timestamp: alignedValue || new Date().toISOString()
+                        };
+                        break;
+                    case 'number':
+                        content = {
+                            value: alignedValue || 0
+                        };
+                        break;
+                    default: // text and other types
+                        content = {
+                            value: alignedValue || ""
+                        };
+                        break;
+                }
             }
             
             // Create the annotation structure based on the schema
@@ -60,6 +71,61 @@ module.exports = async ({ logger, configVars }, stepResults) => {
             
             return annotation;
         });
+    };
+    
+    // Function to align field types between Salesforce and Luminance
+    const alignFieldTypes = (value, salesforceType, luminanceType) => {
+        // If types are the same, return value as is
+        if (salesforceType === luminanceType) {
+            return value;
+        }
+        
+        // Handle type conversions
+        switch(salesforceType) {
+            case 'currency':
+                if (luminanceType === 'number') {
+                    return value || 0;
+                } else if (luminanceType === 'text') {
+                    return value ? value.toString() : "";
+                }
+                break;
+            case 'number':
+                if (luminanceType === 'currency') {
+                    return {
+                        value: value || 0,
+                        currency: "USD"
+                    };
+                } else if (luminanceType === 'text') {
+                    return value ? value.toString() : "";
+                }
+                break;
+            case 'date':
+                // Convert Salesforce date to ISO timestamp for Luminance
+                if (value) {
+                    return new Date(value).toISOString();
+                }
+                return new Date().toISOString();
+            case 'timestamp':
+                if (luminanceType === 'text') {
+                    return value || new Date().toISOString();
+                }
+                break;
+            case 'text':
+                if (luminanceType === 'number') {
+                    const numValue = parseFloat(value);
+                    return isNaN(numValue) ? 0 : numValue;
+                } else if (luminanceType === 'currency') {
+                    const numValue = parseFloat(value);
+                    return {
+                        value: isNaN(numValue) ? 0 : numValue,
+                        currency: "USD"
+                    };
+                }
+                break;
+        }
+        
+        // Default fallback
+        return value;
     };
     
     // Get the Salesforce opportunity data from stepResults

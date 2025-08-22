@@ -8,7 +8,7 @@ export default component({
   display: {
     label: "Luminance API",
     description:
-      "Luminance offers a RESTful HTTP-based API utilizing JSON as the primary serialization format and OAuth2 for authentication",
+      "Luminance API for all things AI contract creation, management, and analysis",
     iconPath: "icon.png",
   },
   hooks: { error: handleErrors },

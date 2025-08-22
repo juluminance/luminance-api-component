@@ -1,45 +1,9 @@
 import { action, input, util } from "@prismatic-io/spectral";
 import { createClient } from "../client";
 
-const getMatters = action({
-  display: {
-    label: "Get Matters for Project",
-    description: "Get Matters for a specific project",
-  },
-  perform: async (context, { connection, projectId, limit }) => {
-    const client = createClient(connection);
-    const { data } = await client.get(`/projects/${projectId}/matters`, { params: { limit } });
-    return { data };
-  },
-  inputs: {
-    connection: input({
-      label: "Connection",
-      type: "connection",
-      required: true,
-    }),
-    projectId: input({
-      label: "Project Id",
-      type: "string",
-      required: true,
-      clean: (value): number => util.types.toNumber(value),
-      comments: "Project ID",
-    }),
-    limit: input({
-      label: "Limit",
-      type: "string",
-      required: false,
-      clean: (value): number | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toNumber(value)
-          : undefined,
-      comments: "Maximum number of objects that can be retrieved",
-    }),
-  },
-});
-
 const createMatter = action({
   display: {
-    label: "Create Matter",
+    label: "Create a New Matter",
     description: "Create a new matter in a project",
   },
   perform: async (context, { connection, projectId, body }) => {
@@ -71,8 +35,8 @@ const createMatter = action({
 
 const AddMatterInfo = action({
   display: {
-    label: "Add Matter Info",
-    description: "Add Matter Info on an existing matter",
+    label: "Add Matter Info to an existing Matter",
+    description: "Add Matter Info to an existing matter",
   },
   perform: async (context, { connection, projectId, matterId, body }) => {
     const client = createClient(connection);
@@ -110,8 +74,8 @@ const AddMatterInfo = action({
 
 const uploadToMatter = action({
   display: {
-    label: "Upload a file to a matter",
-    description: "Upload a file to a matter",
+    label: "Upload a file to an existing matter",
+    description: "Upload a file to an existing matter",
   },
   perform: async (context, { connection, projectId, folderId, matterId, name, body }) => {
     const client = createClient(connection);
@@ -166,43 +130,8 @@ const uploadToMatter = action({
   },
 });
 
-const getMattersMatterId = action({
-  display: {
-    label: "Get Matter by ID",
-    description: "Get a specific matter in a project",
-  },
-  perform: async (context, { connection, projectId, matterId }) => {
-    const client = createClient(connection);
-    const { data } = await client.get(`/projects/${projectId}/matters/${matterId}`);
-    return { data };
-  },
-  inputs: {
-    connection: input({
-      label: "Connection",
-      type: "connection",
-      required: true,
-    }),
-    projectId: input({
-      label: "Project Id",
-      type: "string",
-      required: true,
-      clean: (value): number => util.types.toNumber(value),
-      comments: "Project ID",
-    }),
-    matterId: input({
-      label: "Matter Id",
-      type: "string",
-      required: true,
-      clean: (value): number => util.types.toNumber(value),
-      comments: "Matter ID",
-    }),
-  },
-});
-
 export default {
-  getMatters,
   createMatter,
-  getMattersMatterId,
   uploadToMatter,
   AddMatterInfo
 };

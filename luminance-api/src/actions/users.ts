@@ -127,25 +127,6 @@ const getUsers = action({
   },
 });
 
-const getUsersMe = action({
-  display: {
-    label: "Get Users Me",
-    description: "Get Information on the User being used for Authentication",
-  },
-  perform: async (context, { connection }) => {
-    const client = createClient(connection);
-    const { data } = await client.get(`/users/me`);
-    return { data };
-  },
-  inputs: {
-    connection: input({
-      label: "Connection",
-      type: "connection",
-      required: true,
-    }),
-  },
-});
-
 const getUsersUserId = action({
   display: {
     label: "Get Users User Id",
@@ -174,6 +155,5 @@ const getUsersUserId = action({
 
 export default {
   getUsers,
-  getUsersMe,
   getUsersUserId,
 };

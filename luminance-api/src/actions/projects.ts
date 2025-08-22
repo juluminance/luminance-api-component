@@ -3,8 +3,8 @@ import { createClient } from "../client";
 
 const getProjects = action({
   display: {
-    label: "Get All Projects",
-    description: "Get All Projects",
+    label: "Get All Divisions",
+    description: "Get All Divisions",
   },
   perform: async (context, { connection, limit, id }) => {
     const client = createClient(connection);
@@ -35,7 +35,7 @@ const getProjects = action({
         value !== undefined && value !== null
           ? util.types.toNumber(value)
           : undefined,
-      comments: "Project ID",
+      comments: "Division ID",
     }),
   },
 });

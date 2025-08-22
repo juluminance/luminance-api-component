@@ -3,8 +3,8 @@ import { createClient } from "../client";
 
 const get = action({
   display: {
-    label: "PROD Get",
-    description: "PROD Get System Data",
+    label: "Get System Data",
+    description: "Get System Data",
   },
   perform: async (context, { connection }) => {
     const client = createClient(connection);

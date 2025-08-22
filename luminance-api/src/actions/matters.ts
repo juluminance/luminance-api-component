@@ -4,7 +4,7 @@ import { createClient } from "../client";
 const createMatter = action({
   display: {
     label: "Create a New Matter",
-    description: "Create a new matter in a project",
+    description: "Create a new matter in a Division",
   },
   perform: async (context, { connection, projectId, body }) => {
     const client = createClient(connection);
@@ -18,11 +18,11 @@ const createMatter = action({
       required: true,
     }),
     projectId: input({
-      label: "Project Id",
+      label: "Division Id",
       type: "string",
       required: true,
       clean: (value): number => util.types.toNumber(value),
-      comments: "Project ID",
+      comments: "Division ID",
     }),
     body: input({
       label: "body",
@@ -50,7 +50,7 @@ const AddMatterInfo = action({
       required: true,
     }),
     projectId: input({
-      label: "Project Id",
+      label: "Division Id",
       type: "string",
       required: true,
       clean: (value): number => util.types.toNumber(value),
@@ -93,7 +93,7 @@ const uploadToMatter = action({
       required: true,
     }),
     projectId: input({
-      label: "Project Id",
+      label: "Division Id",
       type: "string",
       required: true,
       clean: (value): number => util.types.toNumber(value),

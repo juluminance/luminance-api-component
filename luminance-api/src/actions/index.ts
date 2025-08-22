@@ -4,6 +4,7 @@ import { extractBaseUrlFromTokenUrl, toAuthorizationHeaders } from "../client";
 import system from "./system";
 import users from "./users";
 import annotationTypes from "./annotationTypes";
+import workflows from "./workflows";
 import projects from "./projects";
 import matters from "./matters";
 
@@ -13,6 +14,7 @@ export default {
   ...annotationTypes,
   ...projects,
   ...matters,
+  ...workflows,
   rawRequest: action({
     display: { label: "Raw Request", description: "Issue a raw HTTP request" },
     inputs: {

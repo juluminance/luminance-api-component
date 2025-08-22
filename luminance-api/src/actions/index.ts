@@ -8,6 +8,7 @@ import workflows from "./workflows";
 import dataProcessing, { filterOutSpecificTags, createLuminanceMatterTagPayload, createInitialMatterPayload } from "./dataProcessing";
 import projects from "./projects";
 import matters from "./matters";
+import salesforceMapper from "./salesforceMapper";
 
 export default {
   ...system,
@@ -17,6 +18,7 @@ export default {
   ...matters,
   ...workflows,
   ...dataProcessing,
+  ...salesforceMapper,
   filterOutSpecificTags,
   createLuminanceMatterTagPayload,
   createInitialMatterPayload,

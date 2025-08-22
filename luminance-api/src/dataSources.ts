@@ -1,5 +1,6 @@
 import { type Element, dataSource, input, util } from "@prismatic-io/spectral";
 import { createClient } from "./client";
+import salesforceFieldMapper from "./dataSources/salesforceFieldMapper";
 
 interface Project {
   id: number | string;
@@ -108,6 +109,11 @@ export const selectWorkflow = dataSource({
   },
 });
 
-export default { selectProject, selectFolder, selectWorkflow };
+export default { 
+  selectProject, 
+  selectFolder, 
+  selectWorkflow,
+  ...salesforceFieldMapper
+};
 
 

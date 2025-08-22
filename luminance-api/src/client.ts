@@ -5,7 +5,7 @@ import {
 } from "@prismatic-io/spectral/dist/clients/http";
 import { oAuth2 } from "./connections";
 
-const extractBaseUrlFromTokenUrl = (tokenUrl: string): string => {
+export const extractBaseUrlFromTokenUrl = (tokenUrl: string): string => {
   try {
     const url = new URL(tokenUrl);
     const hostname = url.hostname;
@@ -20,7 +20,7 @@ const extractBaseUrlFromTokenUrl = (tokenUrl: string): string => {
   }
 };
 
-const toAuthorizationHeaders = (
+export const toAuthorizationHeaders = (
   connection: Connection
 ): { Authorization: string } => {
   const accessToken = util.types.toString(connection.token?.access_token);

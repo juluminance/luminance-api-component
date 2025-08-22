@@ -157,7 +157,7 @@ const uploadToMatter = action({
       comments: "Name of the file to upload",
     }),
     body: input({
-      label: "Name",
+      label: "File",
       type: "string",
       required: true,
       clean: (value): string => util.types.toString(value),

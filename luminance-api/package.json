@@ -9,10 +9,13 @@
   },
   "eslintConfig": {
     "root": true,
-    "extends": ["@prismatic-io/eslint-config-spectral"]
+    "extends": [
+      "@prismatic-io/eslint-config-spectral"
+    ]
   },
   "dependencies": {
-    "@prismatic-io/spectral": "10.5.12"
+    "@prismatic-io/spectral": "10.5.12",
+    "hash-wasm": "^4.12.0"
   },
   "devDependencies": {
     "@prismatic-io/eslint-config-spectral": "2.1.0",

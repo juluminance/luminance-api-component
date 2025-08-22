@@ -1,4 +1,5 @@
 import { oauth2Connection, OAuth2Type } from "@prismatic-io/spectral";
+import { connection } from "@prismatic-io/spectral";
 
 export const oAuth2 = oauth2Connection({
   key: "oAuth2",
@@ -42,4 +43,21 @@ export const oAuth2 = oauth2Connection({
   },
 });
 
-export default [oAuth2];
+export const HMACsecretKey = connection({
+  key: "secretKey",
+  display: {
+    label: "HMAC Secret Key",
+    description: "HMAC Secret Key",
+  },
+  inputs: {
+    secretKey: {
+      label: "HMAC Secret Key",
+      placeholder: "HMAC Secret Key",
+      type: "password",
+      shown: true,
+      required: true,
+    },
+  },
+});
+
+export default [oAuth2, HMACsecretKey];

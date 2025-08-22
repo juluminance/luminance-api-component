@@ -5,6 +5,7 @@ import system from "./system";
 import users from "./users";
 import annotationTypes from "./annotationTypes";
 import workflows from "./workflows";
+import dataProcessing, { filterOutSpecificTags, createLuminanceMatterTagPayload, createInitialMatterPayload } from "./dataProcessing";
 import projects from "./projects";
 import matters from "./matters";
 
@@ -15,6 +16,10 @@ export default {
   ...projects,
   ...matters,
   ...workflows,
+  ...dataProcessing,
+  filterOutSpecificTags,
+  createLuminanceMatterTagPayload,
+  createInitialMatterPayload,
   rawRequest: action({
     display: { label: "Raw Request", description: "Issue a raw HTTP request" },
     inputs: {

@@ -130,8 +130,42 @@ const uploadToMatter = action({
   },
 });
 
+const getASpecificMatter = action({
+  display: {
+    label: "Get information about a specific matter",
+    description: "Get information about a specific matter",
+  },
+  perform: async (context, { connection, projectId, matterId }) => {
+    const client = createClient(connection);
+    const { data } = await client.get(`/projects/${projectId}/matters/${matterId}`);
+    return { data };
+  },
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    projectId: input({
+      label: "Division Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
+    }),
+    matterId: input({
+      label: "Matter Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Matter ID",
+    }),
+  },
+});
+
 export default {
   createMatter,
   uploadToMatter,
-  AddMatterInfo
+  AddMatterInfo,
+  getASpecificMatter
 };

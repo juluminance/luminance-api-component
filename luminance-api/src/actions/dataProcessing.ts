@@ -471,12 +471,37 @@ export const convertBinaryToBase64 = action({
     const toBuffer = (value: unknown): Buffer => {
       if (Buffer.isBuffer(value)) return value;
       if (value instanceof Uint8Array) return Buffer.from(value);
+      if (value instanceof ArrayBuffer) return Buffer.from(new Uint8Array(value));
       if (Array.isArray(value) && (value as unknown[]).every((v) => typeof v === "number")) {
         return Buffer.from(value as number[]);
       }
       if (typeof value === "string") {
-        // If caller passes a string, honor provided encoding (default utf8)
-        return Buffer.from(value, encoding || "utf8");
+        // Handle data URI: data:<mime>;base64,<payload>
+        const trimmed = value.trim();
+        if (trimmed.startsWith("data:")) {
+          const commaIdx = trimmed.indexOf(",");
+          const meta = trimmed.substring(0, commaIdx).toLowerCase();
+          const payload = trimmed.substring(commaIdx + 1);
+          if (meta.includes(";base64")) {
+            return Buffer.from(payload, "base64");
+          }
+          return Buffer.from(payload, "utf8");
+        }
+
+        // If explicit encoding provided, honor it
+        if (encoding) {
+          return Buffer.from(value, encoding);
+        }
+
+        // Auto-detect base64 / hex
+        const compact = trimmed.replace(/\s+/g, "");
+        const looksBase64 = /^[A-Za-z0-9+/=]+$/.test(compact) && compact.length % 4 === 0;
+        const looksHex = /^[0-9a-fA-F]+$/.test(compact) && compact.length % 2 === 0;
+        if (looksBase64) return Buffer.from(compact, "base64");
+        if (looksHex) return Buffer.from(compact, "hex");
+
+        // Fallback to latin1 to preserve raw byte values for binary-like strings
+        return Buffer.from(value, "latin1");
       }
       if (value && typeof value === "object") {
         const obj = value as Record<string, unknown> & { data?: unknown; encoding?: string };
@@ -485,14 +510,29 @@ export const convertBinaryToBase64 = action({
           const nestedEncoding = (obj.encoding as BufferEncoding | undefined) || encoding;
           return toBufferWithEncoding(obj.data, nestedEncoding);
         }
+        // Node Buffer JSON shape: { type: 'Buffer', data: number[] }
+        if ((obj as any).type === "Buffer" && Array.isArray((obj as any).data)) {
+          return Buffer.from((obj as any).data as number[]);
+        }
       }
       return Buffer.from([]);
     };
 
     const toBufferWithEncoding = (value: unknown, enc?: BufferEncoding): Buffer => {
-      if (typeof value === "string") return Buffer.from(value, enc || "utf8");
+      if (typeof value === "string") {
+        if (enc) return Buffer.from(value, enc);
+        // Apply same heuristics as above when no explicit encoding
+        const trimmed = value.trim();
+        const compact = trimmed.replace(/\s+/g, "");
+        const looksBase64 = /^[A-Za-z0-9+/=]+$/.test(compact) && compact.length % 4 === 0;
+        const looksHex = /^[0-9a-fA-F]+$/.test(compact) && compact.length % 2 === 0;
+        if (looksBase64) return Buffer.from(compact, "base64");
+        if (looksHex) return Buffer.from(compact, "hex");
+        return Buffer.from(value, "latin1");
+      }
       if (Buffer.isBuffer(value)) return value;
       if (value instanceof Uint8Array) return Buffer.from(value);
+      if (value instanceof ArrayBuffer) return Buffer.from(new Uint8Array(value));
       if (Array.isArray(value) && (value as unknown[]).every((v) => typeof v === "number")) {
         return Buffer.from(value as number[]);
       }

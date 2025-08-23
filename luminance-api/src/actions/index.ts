@@ -5,8 +5,9 @@ import system from "./system";
 import users from "./users";
 import annotationTypes from "./annotationTypes";
 import workflows from "./workflows";
-import dataProcessing, { filterOutSpecificTags, createLuminanceMatterTagPayload, createInitialMatterPayload } from "./dataProcessing";
+import dataProcessing, { filterOutSpecificTags, createLuminanceMatterTagPayload, createInitialMatterPayload, convertBinaryToBase64 } from "./dataProcessing";
 import projects from "./projects";
+import documents from "./documents";
 import matters from "./matters";
 import salesforceMapper from "./salesforceMapper";
 
@@ -15,6 +16,7 @@ export default {
   ...users,
   ...annotationTypes,
   ...projects,
+  ...documents,
   ...matters,
   ...workflows,
   ...dataProcessing,
@@ -22,6 +24,7 @@ export default {
   filterOutSpecificTags,
   createLuminanceMatterTagPayload,
   createInitialMatterPayload,
+  convertBinaryToBase64,
   rawRequest: action({
     display: { label: "Raw Request", description: "Issue a raw HTTP request" },
     inputs: {

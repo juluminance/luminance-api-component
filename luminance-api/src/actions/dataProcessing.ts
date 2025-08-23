@@ -460,3 +460,65 @@ export const createInitialMatterPayload = action({
 });
 
 
+export const convertBinaryToBase64 = action({
+  display: {
+    label: "Convert Binary to Base64",
+    description: "Convert binary data (Buffer/bytes/string) to a base64 string",
+  },
+  perform: async (context, { data, inputEncoding }) => {
+    const encoding = util.types.toString(inputEncoding) as BufferEncoding | undefined;
+
+    const toBuffer = (value: unknown): Buffer => {
+      if (Buffer.isBuffer(value)) return value;
+      if (value instanceof Uint8Array) return Buffer.from(value);
+      if (Array.isArray(value) && (value as unknown[]).every((v) => typeof v === "number")) {
+        return Buffer.from(value as number[]);
+      }
+      if (typeof value === "string") {
+        // If caller passes a string, honor provided encoding (default utf8)
+        return Buffer.from(value, encoding || "utf8");
+      }
+      if (value && typeof value === "object") {
+        const obj = value as Record<string, unknown> & { data?: unknown; encoding?: string };
+        if (obj.data != null) {
+          // If a nested encoding is specified, prefer that over the outer encoding
+          const nestedEncoding = (obj.encoding as BufferEncoding | undefined) || encoding;
+          return toBufferWithEncoding(obj.data, nestedEncoding);
+        }
+      }
+      return Buffer.from([]);
+    };
+
+    const toBufferWithEncoding = (value: unknown, enc?: BufferEncoding): Buffer => {
+      if (typeof value === "string") return Buffer.from(value, enc || "utf8");
+      if (Buffer.isBuffer(value)) return value;
+      if (value instanceof Uint8Array) return Buffer.from(value);
+      if (Array.isArray(value) && (value as unknown[]).every((v) => typeof v === "number")) {
+        return Buffer.from(value as number[]);
+      }
+      return Buffer.from([]);
+    };
+
+    const buffer = toBuffer(data);
+    const base64 = buffer.toString("base64");
+    return { data: base64 };
+  },
+  inputs: {
+    data: input({
+      label: "Binary Data",
+      type: "data",
+      required: true,
+      comments:
+        "Binary payload to convert. Accepts Buffer, Uint8Array, number[] or string. Objects with a 'data' field are also supported.",
+    }),
+    inputEncoding: input({
+      label: "Input Encoding (for strings)",
+      type: "string",
+      required: false,
+      comments: "Encoding of string inputs (e.g., utf8, base64, hex). Ignored for byte arrays.",
+      clean: (value): string | undefined =>
+        value != null ? util.types.toString(value) : undefined,
+    }),
+  },
+});
+

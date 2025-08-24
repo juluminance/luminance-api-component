@@ -8,7 +8,13 @@ const getDocument = action({
   },
   perform: async (context, { connection, projectId, documentId }) => {
     const client = createClient(connection);
-    const { data } = await client.get(`/projects/${projectId}/documents/${documentId}/download`);
+    const { data } = await client.get(
+      `/projects/${projectId}/documents/${documentId}/download`,
+      {
+        headers: { Accept: "application/octet-stream" },
+        responseType: "arraybuffer",
+      }
+    );
     return { data };
   },
   inputs: {

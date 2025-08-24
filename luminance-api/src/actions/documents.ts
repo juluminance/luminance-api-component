@@ -40,6 +40,41 @@ const getDocument = action({
   },
 });
 
+const getDocumentInfo = action({
+  display: {
+    label: "Get info on a specific Document",
+    description: "Get info on a specific Document",
+  },
+  perform: async (context, { connection, projectId, documentId }) => {
+    const client = createClient(connection);
+    const { data } = await client.get(
+      `/projects/${projectId}/documents/${documentId}`);
+    return { data };
+  },
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    projectId: input({
+      label: "Division Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Division ID",
+    }),
+    documentId: input({
+      label: "Document Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Document ID",
+    }),
+  },
+});
+
 export default {
   getDocument,
+  getDocumentInfo
 };

@@ -5,7 +5,7 @@ import system from "./system";
 import users from "./users";
 import annotationTypes from "./annotationTypes";
 import workflows from "./workflows";
-import dataProcessing, { filterOutSpecificTags, createLuminanceMatterTagPayload, createInitialMatterPayload, convertBinaryToBase64 } from "./dataProcessing";
+import dataProcessing, { filterOutSpecificTags, createLuminanceMatterTagPayload, createInitialMatterPayload, convertBinaryToBase64, normalizeConfigMappings, mapStatusUpdateToConfigVariables } from "./dataProcessing";
 import projects from "./projects";
 import documents from "./documents";
 import matters from "./matters";
@@ -25,6 +25,8 @@ export default {
   createLuminanceMatterTagPayload,
   createInitialMatterPayload,
   convertBinaryToBase64,
+  normalizeConfigMappings,
+  mapStatusUpdateToConfigVariables,
   rawRequest: action({
     display: { label: "Raw Request", description: "Issue a raw HTTP request" },
     inputs: {

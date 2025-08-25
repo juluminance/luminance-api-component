@@ -562,5 +562,95 @@ export const convertBinaryToBase64 = action({
   },
 });
 
+export const normalizeConfigMappings = action({
+  display: {
+    label: "Normalize Config Mappings",
+    description:
+      "Parse nested JSON strings under 'mappings' into proper objects",
+  },
+  perform: async (context, { payload }) => {
+    const coerceToObject = (value: unknown): Record<string, unknown> => {
+      if (value && typeof value === "object" && !Array.isArray(value)) {
+        return value as Record<string, unknown>;
+      }
+      if (typeof value === "string") {
+        try {
+          return coerceToObject(JSON.parse(value));
+        } catch (_err) {
+          return {};
+        }
+      }
+      return {};
+    };
+
+    const root = coerceToObject(payload);
+    const mappings = coerceToObject((root as Record<string, unknown>)["mappings"]);
+    const normalizedEntries = Object.entries(mappings).map(([key, value]) => {
+      if (typeof value === "string") {
+        try {
+          return [key, JSON.parse(value)] as const;
+        } catch (_err) {
+          return [key, value] as const;
+        }
+      }
+      return [key, value] as const;
+    });
+
+    const normalized = {
+      mappings: Object.fromEntries(normalizedEntries),
+    } as Record<string, unknown>;
+
+    return { data: normalized };
+  },
+  inputs: {
+    payload: input({
+      label: "Payload",
+      type: "jsonForm",
+      required: true,
+      comments:
+        "Object with a 'mappings' property where values may be JSON strings",
+    }),
+  },
+});
+
+export const mapStatusUpdateToConfigVariables = action({
+  display: {
+    label: "Map Status Update to Config Variables",
+    description:
+      "Map document_link, assignee, contract_status to Luminance config variable keys",
+  },
+  perform: async (context, { payload }) => {
+    const toObj = (value: unknown): Record<string, unknown> => {
+      if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+      if (typeof value === "string") {
+        try { return toObj(JSON.parse(value)); } catch { return {}; }
+      }
+      return {};
+    };
+
+    const source = toObj(payload);
+    const documentLink = util.types.toString((source as Record<string, unknown>)["document_link"]);
+    const assignee = util.types.toString((source as Record<string, unknown>)["assignee"]);
+    const status = util.types.toString((source as Record<string, unknown>)["contract_status"]);
+
+    const mapped = {
+      luminanceDocumentLink: documentLink,
+      luminanceAssignee: assignee,
+      luminanceStatus: status,
+    } as Record<string, unknown>;
+
+    return { data: mapped };
+  },
+  inputs: {
+    payload: input({
+      label: "Status Update JSON",
+      type: "jsonForm",
+      required: true,
+      comments:
+        "Object with keys: document_link, assignee, contract_status",
+    }),
+  },
+});
+
 // Removed: buildPlatformDocumentLink. Use documents.createDocumentLink action instead.
 

@@ -129,7 +129,7 @@ const getUsers = action({
 
 const getUsersUserId = action({
   display: {
-    label: "Get Users User Id",
+    label: "Get a User",
     description: "Get a specific user",
   },
   perform: async (context, { connection, userId }) => {

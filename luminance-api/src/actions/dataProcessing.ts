@@ -562,3 +562,5 @@ export const convertBinaryToBase64 = action({
   },
 });
 
+// Removed: buildPlatformDocumentLink. Use documents.createDocumentLink action instead.
+

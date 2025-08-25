@@ -1,5 +1,5 @@
 import { action, input, util } from "@prismatic-io/spectral";
-import { createClient } from "../client";
+import { createClient, extractBaseUrlFromTokenUrl } from "../client";
 
 const getDocument = action({
   display: {
@@ -74,7 +74,41 @@ const getDocumentInfo = action({
   },
 });
 
+const createDocumentLink = action({
+  display: {
+    label: "Create Document Link",
+    description: "Build a Luminance platform document link from a document ID",
+  },
+  perform: async (context, { connection, documentId }) => {
+    const tokenUrl = util.types.toString(connection.fields?.tokenUrl);
+    if (!tokenUrl) {
+      throw new Error("Token URL is required on the connection to determine subdomain");
+    }
+    const apiBaseUrl = extractBaseUrlFromTokenUrl(tokenUrl);
+    const host = new URL(apiBaseUrl).hostname; // e.g., <sub>.app.luminance.com
+    const subdomain = host.split(".")[0] || host;
+    const id = encodeURIComponent(util.types.toString(documentId));
+    const link = `https://${subdomain}.app.luminance.com/platform/platform-home/groups-dashboard/document/${id}`;
+    return { data: link };
+  },
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    documentId: input({
+      label: "Document Id",
+      type: "string",
+      required: true,
+      clean: (value): number | string => util.types.toString(value),
+      comments: "Document ID to link to",
+    }),
+  },
+});
+
 export default {
   getDocument,
-  getDocumentInfo
+  getDocumentInfo,
+  createDocumentLink,
 };

@@ -206,4 +206,110 @@ export const salesforceFieldMappingExample = dataSource({
   },
 });
 
-export default { salesforceFieldMappingExample };
+export const salesforceConfigFieldPicker = dataSource({
+  dataSourceType: "jsonForm",
+  display: {
+    label: "Salesforce Field Picker for Status Updates",
+    description:
+      "Let users pick Salesforce fields for updates to Salesforce Statuses",
+  },
+  inputs: {
+    sfConnection: input({
+      label: "Salesforce Connection",
+      type: "connection",
+      required: true,
+    }),
+    salesforceObjects: input({
+      label: "Salesforce Objects",
+      type: "string",
+      required: true,
+      comments: "Comma-separated object names (e.g., 'Account, Opportunity')",
+    }),
+  },
+  perform: async (context, params) => {
+    // Preset variables
+    const variables: Array<{ key: string; label: string }> = [
+      { key: "luminanceDocumentLink", label: "Luminance Document Link" },
+      { key: "luminanceStatus", label: "Luminance Status" },
+      { key: "luminanceAssignee", label: "Luminance Assignee" },
+    ];
+
+    // Create Salesforce client
+    const salesforceClient = new jsforce.Connection({
+      instanceUrl: util.types.toString(params.sfConnection.token?.instance_url),
+      version: "51.0",
+      accessToken: util.types.toString(params.sfConnection.token?.access_token),
+    });
+
+    // Collect fields across specified objects
+    const objectNames = util.types
+      .toString(params.salesforceObjects)
+      .split(",")
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+    if (!objectNames.length) {
+      throw new Error("At least one Salesforce object must be specified");
+    }
+
+    const allFields: any[] = [];
+    for (const objectName of objectNames) {
+      try {
+        const description = await salesforceClient.sobject(objectName).describe();
+        const commonlyNeededFields = ["Id", "Name", "CreatedDate", "LastModifiedDate", "OwnerId"];
+        const accessibleFields = description.fields.filter(
+          (field: any) => field.deprecatedAndHidden !== true && (field.updateable !== false || commonlyNeededFields.includes(field.name))
+        );
+        const fieldsWithContext = accessibleFields.map((field: any) => ({
+          ...field,
+          objectName,
+          fieldKey: `${objectName}:${field.name}`,
+          fieldType: field.type,
+          isCustom: field.custom || false,
+        }));
+        allFields.push(...fieldsWithContext);
+      } catch (_err) {
+        // Skip objects that aren't available in the org
+      }
+    }
+
+    if (!allFields.length) {
+      throw new Error("No accessible fields found for the specified objects");
+    }
+
+    // Build JSON Form schema with one picker per variable
+    const schema: any = {
+      type: "object",
+      properties: {
+        mappings: {
+          type: "object",
+          properties: variables.reduce((acc, v) => {
+            acc[v.key] = {
+              type: "string",
+              title: v.label,
+              oneOf: allFields.map((field) => ({
+                title: `${field.label} (${field.objectName})`,
+                const: JSON.stringify({ fieldKey: field.name, objectName: field.objectName, fieldType: field.fieldType, isCustom: field.isCustom }),
+              })),
+            };
+            return acc;
+          }, {} as Record<string, any>),
+        },
+      },
+    };
+
+    const uiSchema = {
+      type: "VerticalLayout",
+      elements: [
+        ...variables.map((v) => ({
+          type: "Control",
+          scope: `#/properties/mappings/properties/${v.key}`,
+          label: v.label,
+        })),
+      ],
+    };
+
+    return { result: { schema, uiSchema } };
+  },
+});
+
+export default { salesforceFieldMappingExample, salesforceConfigFieldPicker };

@@ -232,6 +232,7 @@ export const salesforceConfigFieldPicker = dataSource({
       { key: "luminanceDocumentLink", label: "Luminance Document Link" },
       { key: "luminanceStatus", label: "Luminance Status" },
       { key: "luminanceAssignee", label: "Luminance Assignee" },
+      { key: "luminanceMatterId", label: "Luminance Matter ID" },
     ];
 
     // Create Salesforce client

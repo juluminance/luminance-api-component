@@ -238,6 +238,7 @@ export const salesforceConfigFieldPicker = dataSource({
       { key: "luminanceDocumentLink", label: "Luminance Document Link" },
       { key: "luminanceStatus", label: "Luminance Status" },
       { key: "luminanceAssignee", label: "Luminance Assignee" },
+      { key: "luminanceLastUpdated", label: "Luminance Last Updated" },
     ];
 
     // Create Salesforce client
@@ -303,6 +304,7 @@ export const salesforceConfigFieldPicker = dataSource({
 
     // Build JSON Form schema with per-contract-type pickers
     const mappingProperties: Record<string, any> = {};
+    const defaultMappings: Record<string, any> = {};
     const requiredMatterIds: string[] = [];
 
     for (const ct of contractTypes) {
@@ -332,6 +334,8 @@ export const salesforceConfigFieldPicker = dataSource({
             const: JSON.stringify({ fieldKey: field.name, objectName: field.objectName, fieldType: field.fieldType, isCustom: field.isCustom }),
           })),
         };
+        // Ensure optional keys appear in payload as null when not selected
+        defaultMappings[tagKey] = null;
       }
     }
 
@@ -342,6 +346,7 @@ export const salesforceConfigFieldPicker = dataSource({
           type: "object",
           properties: mappingProperties,
           required: requiredMatterIds,
+          default: defaultMappings,
         },
       },
     };

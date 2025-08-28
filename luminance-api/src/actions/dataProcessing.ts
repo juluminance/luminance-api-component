@@ -623,6 +623,7 @@ export const normalizeConfigMappings = action({
       "luminanceDocumentLink",
       "luminanceStatus",
       "luminanceAssignee",
+      "luminanceLastUpdated",
     ];
     for (const k of optionalKeys) {
       if (!Object.prototype.hasOwnProperty.call(filtered, k)) {

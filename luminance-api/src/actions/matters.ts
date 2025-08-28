@@ -196,10 +196,59 @@ const getVersionsOfAMatter = action({
   },
 });
 
+const assignUser = action({
+  display: {
+    label: "Assign a user to a matter version",
+    description: "Assign a user to a specific version of a matter",
+  },
+  perform: async (context, { connection, projectId, matterId, matterVersion, userId }) => {
+    const client = createClient(connection);
+    const body = { user_id: util.types.toString(userId) };
+    const { data } = await client.patch(`/projects/${projectId}/matters/${matterId}/versions/${matterVersion}/assign`, body);
+    return { data };
+  },
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    projectId: input({
+      label: "Division Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
+    }),
+    matterId: input({
+      label: "Matter Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Matter ID",
+    }),
+    matterVersion: input({
+      label: "Matter Version",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Matter Version",
+    }),
+    userId: input({
+      label: "User Id",
+      type: "string",
+      required: true,
+      clean: (value): string => util.types.toString(value),
+      comments: "User ID to assign",
+    }),
+  },
+});
+
 export default {
   createMatter,
   uploadToMatter,
   AddMatterInfo,
   getASpecificMatter,
   getVersionsOfAMatter,
+  assignUser,
 };

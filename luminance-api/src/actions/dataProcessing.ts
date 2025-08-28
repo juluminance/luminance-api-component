@@ -568,7 +568,7 @@ export const normalizeConfigMappings = action({
     description:
       "Parse nested JSON strings under 'mappings' into proper objects",
   },
-  perform: async (context, { payload }) => {
+  perform: async (context, { payload, selectedContractType }) => {
     const coerceToObject = (value: unknown): Record<string, unknown> => {
       if (value && typeof value === "object" && !Array.isArray(value)) {
         return value as Record<string, unknown>;
@@ -585,19 +585,54 @@ export const normalizeConfigMappings = action({
 
     const root = coerceToObject(payload);
     const mappings = coerceToObject((root as Record<string, unknown>)["mappings"]);
-    const normalizedEntries = Object.entries(mappings).map(([key, value]) => {
-      if (typeof value === "string") {
-        try {
-          return [key, JSON.parse(value)] as const;
-        } catch (_err) {
-          return [key, value] as const;
+
+    // Build contract-type key helper
+    const toKey = (ct: string) => ct.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
+    const ctKey = toKey(util.types.toString(selectedContractType));
+
+    if (!ctKey) {
+      throw new Error("selectedContractType is required");
+    }
+
+    // Filter keys for selected contract type and strip suffix
+    const filtered: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(mappings)) {
+      const suffix = `_${ctKey}`;
+      if (key.endsWith(suffix)) {
+        const baseKey = key.slice(0, -suffix.length);
+        // Parse JSON strings for field selections
+        if (typeof value === "string") {
+          try {
+            filtered[baseKey] = JSON.parse(value);
+          } catch (_err) {
+            filtered[baseKey] = value;
+          }
+        } else {
+          filtered[baseKey] = value;
         }
       }
-      return [key, value] as const;
-    });
+    }
+
+    // Validate required matterId present
+    if (!Object.prototype.hasOwnProperty.call(filtered, "matterId")) {
+      throw new Error(`Missing required mapping: matterId for contract type '${selectedContractType}'`);
+    }
+
+    // Ensure optional keys exist with null when not set
+    const optionalKeys = [
+      "luminanceDocumentLink",
+      "luminanceStatus",
+      "luminanceAssignee",
+    ];
+    for (const k of optionalKeys) {
+      if (!Object.prototype.hasOwnProperty.call(filtered, k)) {
+        (filtered as Record<string, unknown>)[k] = null;
+      }
+    }
 
     const normalized = {
-      mappings: Object.fromEntries(normalizedEntries),
+      mappings: filtered,
+      selectedContractType: util.types.toString(selectedContractType),
     } as Record<string, unknown>;
 
     return { data: normalized };
@@ -609,6 +644,13 @@ export const normalizeConfigMappings = action({
       required: true,
       comments:
         "Object with a 'mappings' property where values may be JSON strings",
+    }),
+    selectedContractType: input({
+      label: "Selected Contract Type",
+      type: "string",
+      required: true,
+      comments: "Contract type to extract mappings for (matches config value).",
+      clean: (value): string => util.types.toString(value),
     }),
   },
 });

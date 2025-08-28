@@ -225,14 +225,19 @@ export const salesforceConfigFieldPicker = dataSource({
       required: true,
       comments: "Comma-separated object names (e.g., 'Account, Opportunity')",
     }),
+    contractTypesConfig: input({
+      label: "Contract Types (Config)",
+      type: "string",
+      required: false,
+      comments: "Config-provided contract types; overrides manual input if present.",
+    }),
   },
   perform: async (context, params) => {
-    // Preset variables
-    const variables: Array<{ key: string; label: string }> = [
+    // Optional tags to map per contract type (all treated as text)
+    const optionalTags: Array<{ key: string; label: string }> = [
       { key: "luminanceDocumentLink", label: "Luminance Document Link" },
       { key: "luminanceStatus", label: "Luminance Status" },
       { key: "luminanceAssignee", label: "Luminance Assignee" },
-      { key: "luminanceMatterId", label: "Luminance Matter ID" },
     ];
 
     // Create Salesforce client
@@ -251,6 +256,25 @@ export const salesforceConfigFieldPicker = dataSource({
     if (!objectNames.length) {
       throw new Error("At least one Salesforce object must be specified");
     }
+
+    // Parse contract types (prefer config-provided value)
+    const contractTypesSource = util.types.toString(params.contractTypesConfig);
+    const contractTypes = contractTypesSource
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    if (!contractTypes.length) {
+      // Return a placeholder UI prompting user to enter contract types
+      const schema: any = { type: "object", properties: {} };
+      const uiSchema = {
+        type: "VerticalLayout",
+        elements: [
+          { type: "Label", text: "Set the Contract Types config variable to configure per-contract mappings (e.g., 'NDA, MSA')." },
+        ],
+      };
+      return { result: { schema, uiSchema } };
+    }
+    const toKey = (ct: string) => ct.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
 
     const allFields: any[] = [];
     for (const objectName of objectNames) {
@@ -277,36 +301,68 @@ export const salesforceConfigFieldPicker = dataSource({
       throw new Error("No accessible fields found for the specified objects");
     }
 
-    // Build JSON Form schema with one picker per variable
+    // Build JSON Form schema with per-contract-type pickers
+    const mappingProperties: Record<string, any> = {};
+    const requiredMatterIds: string[] = [];
+
+    for (const ct of contractTypes) {
+      const ctKey = toKey(ct);
+      const matterFieldKey = `matterId_${ctKey}`;
+
+      // Required Matter ID per contract type
+      mappingProperties[matterFieldKey] = {
+        type: "string",
+        title: `Matter ID (${ct})`,
+        oneOf: allFields.map((field) => ({
+          title: `${field.label} (${field.objectName})`,
+          const: JSON.stringify({ fieldKey: field.name, objectName: field.objectName, fieldType: field.fieldType, isCustom: field.isCustom }),
+        })),
+      };
+      requiredMatterIds.push(matterFieldKey);
+
+      // Optional additional mappings per contract type
+      for (const tag of optionalTags) {
+        const tagKey = `${tag.key}_${ctKey}`;
+        mappingProperties[tagKey] = {
+          type: ["string", "null"],
+          title: `${tag.label} (${ct})`,
+          default: null,
+          oneOf: allFields.map((field) => ({
+            title: `${field.label} (${field.objectName})`,
+            const: JSON.stringify({ fieldKey: field.name, objectName: field.objectName, fieldType: field.fieldType, isCustom: field.isCustom }),
+          })),
+        };
+      }
+    }
+
     const schema: any = {
       type: "object",
       properties: {
         mappings: {
           type: "object",
-          properties: variables.reduce((acc, v) => {
-            acc[v.key] = {
-              type: "string",
-              title: v.label,
-              oneOf: allFields.map((field) => ({
-                title: `${field.label} (${field.objectName})`,
-                const: JSON.stringify({ fieldKey: field.name, objectName: field.objectName, fieldType: field.fieldType, isCustom: field.isCustom }),
-              })),
-            };
-            return acc;
-          }, {} as Record<string, any>),
+          properties: mappingProperties,
+          required: requiredMatterIds,
         },
       },
     };
 
     const uiSchema = {
       type: "VerticalLayout",
-      elements: [
-        ...variables.map((v) => ({
-          type: "Control",
-          scope: `#/properties/mappings/properties/${v.key}`,
-          label: v.label,
-        })),
-      ],
+      elements: contractTypes.map((ct) => {
+        const ctKey = toKey(ct);
+        return {
+          type: "Group",
+          label: `Mappings for ${ct}`,
+          elements: [
+            { type: "Control", scope: `#/properties/mappings/properties/matterId_${ctKey}`, label: `Matter ID (${ct})` },
+            ...optionalTags.map((tag) => ({
+              type: "Control",
+              scope: `#/properties/mappings/properties/${tag.key}_${ctKey}`,
+              label: `${tag.label} (${ct})`,
+            })),
+          ],
+        };
+      }),
     };
 
     return { result: { schema, uiSchema } };

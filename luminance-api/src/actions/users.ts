@@ -3,34 +3,20 @@ import { createClient } from "../client";
 
 const getUsers = action({
   display: {
-    label: "Get Users",
-    description: "Get Users Collection",
+    label: "Get User by Username",
+    description: "Get a specific user by their username",
   },
   perform: async (
     context,
     {
       connection,
-      id,
-      limit,
-      createdAt,
-      createdBy,
       username,
-      accountId,
-      state,
-      multiFactorAuthEnabled,
     }
   ) => {
     const client = createClient(connection);
     const { data } = await client.get(`/users`, {
       params: {
-        id,
-        limit,
-        created_at: createdAt,
-        created_by: createdBy,
         username,
-        account_id: accountId,
-        state,
-        multi_factor_auth_enabled: multiFactorAuthEnabled,
       },
     });
     return { data };
@@ -40,47 +26,6 @@ const getUsers = action({
       label: "Connection",
       type: "connection",
       required: true,
-    }),
-    id: input({
-      label: "Id",
-      type: "string",
-      required: false,
-      clean: (value): number | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toNumber(value)
-          : undefined,
-      comments: "Unique User ID",
-    }),
-    limit: input({
-      label: "Limit",
-      type: "string",
-      required: false,
-      default: "50",
-      clean: (value): number | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toNumber(value)
-          : undefined,
-      comments: "Maximum number of objects that can be retrieved",
-    }),
-    createdAt: input({
-      label: "Created At",
-      type: "string",
-      required: false,
-      clean: (value): string | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toString(value)
-          : undefined,
-      comments: "Time of Creation",
-    }),
-    createdBy: input({
-      label: "Created By",
-      type: "string",
-      required: false,
-      clean: (value): number | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toNumber(value)
-          : undefined,
-      comments: "User ID of Creator",
     }),
     username: input({
       label: "Username",
@@ -92,38 +37,7 @@ const getUsers = action({
           : undefined,
       comments: "Username used in login credentials",
     }),
-    accountId: input({
-      label: "Account Id",
-      type: "string",
-      required: false,
-      clean: (value): number | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toNumber(value)
-          : undefined,
-      comments: "ID of Associated Account this User is Added to",
-    }),
-    state: input({
-      label: "State",
-      type: "string",
-      required: false,
-      default: "active",
-      model: [
-        { label: "Active", value: "active" },
-        { label: "Inactive", value: "inactive" },
-      ],
-      clean: (value): string | undefined =>
-        value !== undefined && value !== null
-          ? util.types.toString(value)
-          : undefined,
-      comments: "Current State of User",
-    }),
-    multiFactorAuthEnabled: input({
-      label: "Multi Factor Auth Enabled",
-      type: "boolean",
-      required: true,
-      clean: (value): boolean => util.types.toBool(value),
-      comments: "If true MFA is Enabled for this User",
-    }),
+
   },
 });
 

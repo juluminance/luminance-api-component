@@ -72,6 +72,55 @@ const AddMatterInfo = action({
   },
 });
 
+
+const PatchMatterInfo = action({
+  display: {
+    label: "Patch Matter Info on an existing Matter",
+    description: "Patch Matter Info on an existing matter",
+  },
+  perform: async (context, { connection, projectId, matterId, annotationId, body }) => {
+    const client = createClient(connection);
+    const { data } = await client.patch(`/projects/${projectId}/matters/${matterId}/annotations?annotation_type_id=${annotationId}`, body);
+    return { data };
+  },
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    projectId: input({
+      label: "Division Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Project ID",
+    }),
+    matterId: input({
+      label: "Matter Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Matter ID",
+    }),
+    annotationId: input({
+      label: "Annotation Id",
+      type: "string",
+      required: true,
+      clean: (value): number => util.types.toNumber(value),
+      comments: "Annotation ID",
+    }),
+    body: input({
+      label: "body",
+      type: "jsonForm",
+      required: true,
+      comments: "Request body as JSON objects",
+    }),
+  },
+});
+
+
+
 const uploadToMatter = action({
   display: {
     label: "Upload a file to an existing matter",
@@ -248,6 +297,7 @@ export default {
   createMatter,
   uploadToMatter,
   AddMatterInfo,
+  PatchMatterInfo,
   getASpecificMatter,
   getVersionsOfAMatter,
   assignUser,

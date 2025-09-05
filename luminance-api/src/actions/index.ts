@@ -10,6 +10,7 @@ import projects from "./projects";
 import documents from "./documents";
 import matters from "./matters";
 import salesforceMapper from "./salesforceMapper";
+import webhooks from "./webhooks";
 
 export default {
   ...system,
@@ -21,6 +22,7 @@ export default {
   ...workflows,
   ...dataProcessing,
   ...salesforceMapper,
+  ...webhooks,
   filterOutSpecificTags,
   createLuminanceMatterTagPayload,
   createInitialMatterPayload,

@@ -1,4 +1,4 @@
-import { createHash } from "crypto";
+import { createHash, createHmac } from "crypto";
 import { util } from "@prismatic-io/spectral";
 import { createMD4, createWhirlpool } from "hash-wasm";
 import { IHasher } from "hash-wasm/dist/lib/WASMInterface";
@@ -132,3 +132,11 @@ export const supportedStatusCodes = {
 
 export const isSupportedStatusCode = (statusCode: unknown): boolean =>
   util.types.toString(statusCode) in supportedStatusCodes;
+
+export const createHmacHex = (
+  algorithm: string,
+  secret: string,
+  payload: string | Buffer
+): string => {
+  return createHmac(algorithm.toLowerCase(), secret).update(payload).digest("hex");
+};

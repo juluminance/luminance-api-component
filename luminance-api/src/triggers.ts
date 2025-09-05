@@ -21,6 +21,13 @@ interface ExtendedTriggerPayload extends TriggerPayload {
     headers: Record<string, string>;
     body: string;
   };
+  debug?: {
+    hmacHeaderName: string;
+    providedHash: string;
+    computedHash: string;
+    receivedBody: string;
+    receivedHeaders: Record<string, string>;
+  };
 }
 
 export const hmacWebhookTrigger = trigger({
@@ -34,6 +41,7 @@ export const hmacWebhookTrigger = trigger({
       .toString(params.hmacHeaderName)
       .toLowerCase();
     const providedHash = lowerHeaders[hmacHeaderName] || "";
+    const debugEnabled = util.types.toString((params as any).debug) === "true";
 
     const hash = createHmac(
       params.hashFunction,
@@ -43,12 +51,26 @@ export const hmacWebhookTrigger = trigger({
       .digest("hex");
 
     if (hash !== providedHash.toLowerCase()) {
-      throw new Error(
-        `Rejecting payload. The hash '${providedHash}' provided by header '${hmacHeaderName}' did not match the hash that was computed here using ${params.hashFunction} and the configured HMAC secret.`
-      );
+      const baseMsg = `Rejecting payload. The hash '${providedHash}' provided by header '${hmacHeaderName}' did not match the hash that was computed here using ${params.hashFunction} and the configured HMAC secret.`;
+      if (debugEnabled) {
+        const receivedBody = util.types.toString(payload.rawBody.data);
+        const debugMsg = `\n[Debug] computedHash='${hash}', receivedBody='${receivedBody}', receivedHeaders='${JSON.stringify(payload.headers)}'`;
+        throw new Error(baseMsg + debugMsg);
+      }
+      throw new Error(baseMsg);
     }
 
     const result: ExtendedTriggerPayload = { ...payload };
+
+    if (debugEnabled) {
+      result.debug = {
+        hmacHeaderName,
+        providedHash,
+        computedHash: hash,
+        receivedBody: util.types.toString(payload.rawBody.data),
+        receivedHeaders: payload.headers as Record<string, string>,
+      };
+    }
 
     const defaultStatusCode = 200;
     const defaultContentType = "application/json";
@@ -179,6 +201,13 @@ export const hmacWebhookTrigger = trigger({
       required: true,
     }),
     hashFunction: { ...hashFunction, label: "HMAC Hash Function" },
+    debug: input({
+      label: "Debug",
+      type: "string",
+      required: false,
+      default: "false",
+      comments: "If 'true', include received body/headers in output and mismatch error.",
+    }),
   },
   synchronousResponseSupport: "valid",
   scheduleSupport: "invalid",

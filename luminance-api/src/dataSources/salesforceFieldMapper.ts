@@ -67,7 +67,7 @@ export const salesforceFieldMappingExample = dataSource({
           const commonlyNeededFields = ['Id', 'Name', 'CreatedDate', 'LastModifiedDate', 'OwnerId'];
           const accessibleFields = objectDescription.fields.filter((field: any) => 
               field.deprecatedAndHidden !== true &&
-            (field.updateable !== false || commonlyNeededFields.includes(field.name || field.calculated !== false))
+            (field.updateable !== false || commonlyNeededFields.includes(field.name) || field.calculated !== false)
           );
           
           // Add object context to each field

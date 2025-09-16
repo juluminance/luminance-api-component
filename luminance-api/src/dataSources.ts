@@ -1,6 +1,7 @@
 import { type Element, dataSource, input, util } from "@prismatic-io/spectral";
 import { createClient } from "./client";
 import salesforceFieldMapper from "./dataSources/salesforceFieldMapper";
+import hubspotFieldMapper from "./dataSources/hubspotFieldMapper";
 
 interface Project {
   id: number | string;
@@ -113,7 +114,8 @@ export default {
   selectProject, 
   selectFolder, 
   selectWorkflow,
-  ...salesforceFieldMapper
+  ...salesforceFieldMapper,
+  ...hubspotFieldMapper
 };
 
 

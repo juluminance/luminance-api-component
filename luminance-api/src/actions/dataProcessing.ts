@@ -176,6 +176,100 @@ const mapToLuminanceAnnotations = (
   });
 };
 
+// HubSpot variant: builds annotations from HubSpot mappings
+const mapHubSpotToLuminanceAnnotations = (
+  mappings: Array<Record<string, unknown>>,
+  primaryData: Record<string, unknown>,
+  secondaryData: Record<string, unknown>,
+  defaultCurrency: string
+) => {
+  const normalizeHubSpotSourceType = (hsType: string | undefined):
+    | "text"
+    | "number"
+    | "currency"
+    | "date"
+    | "timestamp" => {
+    const t = (hsType || "").toLowerCase();
+    if (t.includes("number")) return "number";
+    if (t === "date") return "date";
+    if (t === "datetime" || t.includes("time")) return "timestamp";
+    return "text";
+  };
+
+  return (mappings || []).map((mapping) => {
+    const annotationTypeId = parseInt(
+      util.types.toString((mapping as any).luminanceFields),
+      10
+    );
+
+    // Parse hubspotField JSON to get fieldKey and type
+    let fieldKey = "";
+    let objectName = "";
+    let hubspotFieldType = "text" as "text" | "number" | "currency" | "date" | "timestamp";
+    const raw = (mapping as any).hubspotField as unknown;
+    if (typeof raw === "string") {
+      try {
+        const parsed = JSON.parse(raw);
+        fieldKey = util.types.toString(parsed.fieldKey) || "";
+        objectName = util.types.toString(parsed.objectName) || "";
+        hubspotFieldType = normalizeHubSpotSourceType(
+          util.types.toString(parsed.fieldType)
+        );
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    const sourceType = hubspotFieldType || "text";
+    const luminanceFieldType = util.types.toString(
+      (mapping as any).luminanceFieldType
+    ) as "text" | "number" | "currency" | "timestamp" | undefined;
+
+    let fieldValue: unknown = undefined;
+    if (primaryData && Object.prototype.hasOwnProperty.call(primaryData, fieldKey)) {
+      fieldValue = primaryData[fieldKey];
+    } else if (secondaryData && Object.prototype.hasOwnProperty.call(secondaryData, fieldKey)) {
+      fieldValue = secondaryData[fieldKey];
+    }
+    const alignedValue = alignFieldTypes(
+      fieldValue,
+      sourceType,
+      luminanceFieldType || "text",
+      defaultCurrency
+    );
+
+    let content: Record<string, unknown> = {};
+    if (sourceType === "date" || sourceType === "timestamp") {
+      content = { timestamp: (alignedValue as string) || new Date().toISOString() };
+    } else {
+      switch (luminanceFieldType) {
+        case "currency":
+          content = {
+            value: (alignedValue as { value?: number }).value || 0,
+            currency:
+              (alignedValue as { currency?: string }).currency || defaultCurrency,
+          };
+          break;
+        case "timestamp":
+          content = {
+            timestamp: (alignedValue as string) || new Date().toISOString(),
+          };
+          break;
+        case "number":
+          content = { value: (alignedValue as number) || 0 };
+          break;
+        default:
+          content = { value: alignedValue != null ? alignedValue : "" };
+      }
+    }
+
+    return {
+      annotation_type_id: annotationTypeId,
+      content,
+    };
+  });
+};
+
 const buildAnnotationsFromMapping = action({
   display: {
     label: "Map data between Salesforce and Luminance",
@@ -256,6 +350,84 @@ const buildAnnotationsFromMapping = action({
 
 export default {
   buildAnnotationsFromMapping,
+  // HubSpot
+  buildAnnotationsFromHubSpotMapping: action({
+    display: {
+      label: "Map data between HubSpot and Luminance",
+      description:
+        "Map HubSpot data into Luminance matter tag content using the configured mapping",
+    },
+    perform: async (
+      _context,
+      { mappings, primaryData, secondaryData, namePrefix, defaultCurrency }
+    ) => {
+      const currency = util.types.toString(defaultCurrency) || "USD";
+      const mappingArray = toArray<Record<string, unknown>>(mappings);
+      if (!mappingArray.length) {
+        throw new Error(
+          "Mappings must be an array or contain a nested array (e.g., 'mymappings')."
+        );
+      }
+      const annotations = mapHubSpotToLuminanceAnnotations(
+        mappingArray,
+        (primaryData as Record<string, unknown>) || {},
+        (secondaryData as Record<string, unknown>) || {},
+        currency
+      );
+
+      const prefix = util.types.toString(namePrefix);
+      const maybeName = prefix
+        ? `${prefix} - ${Math.random().toString(36).substring(2, 10)}`
+        : undefined;
+
+      const payload: Record<string, unknown> = {
+        required_matter_annotations: annotations,
+      };
+      if (maybeName) {
+        payload.name = maybeName;
+      }
+
+      return { data: payload };
+    },
+    inputs: {
+      mappings: input({
+        label: "Mappings",
+        type: "jsonForm",
+        required: true,
+        comments:
+          "Array of mapping entries from the configuration variables (expects hubspotField + luminanceFields)",
+      }),
+      primaryData: input({
+        label: "Primary Data (HubSpot properties)",
+        type: "jsonForm",
+        required: true,
+        comments: "HubSpot properties object from a record",
+      }),
+      secondaryData: input({
+        label: "Secondary Data (HubSpot properties)",
+        type: "jsonForm",
+        required: false,
+        comments: "Optional secondary HubSpot properties object (e.g., associated Company)",
+      }),
+      namePrefix: input({
+        label: "Name Prefix",
+        type: "string",
+        required: false,
+        comments:
+          "Optional. If set, output includes a name with this prefix and a random suffix.",
+        clean: (value): string | undefined =>
+          value != null ? util.types.toString(value) : undefined,
+      }),
+      defaultCurrency: input({
+        label: "Default Currency",
+        type: "string",
+        required: false,
+        comments: "Default currency code used for currency mappings when unspecified.",
+        default: "USD",
+        clean: (value): string => util.types.toString(value, "USD"),
+      }),
+    },
+  }),
 };
 
 export const filterOutSpecificTags = action({
@@ -558,6 +730,102 @@ export const convertBinaryToBase64 = action({
       comments: "Encoding of string inputs (e.g., utf8, base64, hex). Ignored for byte arrays.",
       clean: (value): string | undefined =>
         value != null ? util.types.toString(value) : undefined,
+    }),
+  },
+});
+
+export const buildMultipartFromBase64 = action({
+  display: {
+    label: "Build multipart parts from Base64",
+    description:
+      "Convert a base64 string (or data URI) into a structure suitable for multipart/form-data",
+  },
+  perform: async (
+    context,
+    { fileBase64, filename, contentType, fieldName, additionalFields }
+  ) => {
+    const name = util.types.toString(filename) || "upload.bin";
+    const mime = util.types.toString(contentType) || "application/octet-stream";
+    const formField = util.types.toString(fieldName) || "file";
+
+    const toBase64Payload = (value: unknown): string => {
+      const str = util.types.toString(value);
+      if (!str) return "";
+      const trimmed = str.trim();
+      if (trimmed.startsWith("data:")) {
+        const commaIdx = trimmed.indexOf(",");
+        return commaIdx >= 0 ? trimmed.substring(commaIdx + 1) : "";
+      }
+      return trimmed;
+    };
+
+    const payloadBase64 = toBase64Payload(fileBase64);
+    if (!payloadBase64) {
+      throw new Error("fileBase64 is required and must be a base64 string or data URI");
+    }
+
+    // Additional non-file fields (stringified)
+    const fieldsObj = ((): Record<string, string> => {
+      const obj = (additionalFields as Record<string, unknown>) || {};
+      const out: Record<string, string> = {};
+      for (const [k, v] of Object.entries(obj)) {
+        out[k] = v == null ? "" : String(v);
+      }
+      return out;
+    })();
+
+    const multipart = {
+      fields: fieldsObj,
+      files: [
+        {
+          fieldName: formField,
+          filename: name,
+          contentType: mime,
+          dataBase64: payloadBase64,
+        },
+      ],
+    } as const;
+
+    return { data: { multipart } };
+  },
+  inputs: {
+    fileBase64: input({
+      label: "Base64 File",
+      type: "data",
+      required: true,
+      comments:
+        "Base64 payload or data URI (data:<mime>;base64,<payload>) for the file",
+    }),
+    filename: input({
+      label: "Filename",
+      type: "string",
+      required: false,
+      default: "upload.bin",
+      comments: "Filename to include in the multipart part",
+      clean: (value): string => util.types.toString(value, "upload.bin"),
+    }),
+    contentType: input({
+      label: "Content Type",
+      type: "string",
+      required: false,
+      default: "application/octet-stream",
+      comments: "MIME type of the file",
+      clean: (value): string =>
+        util.types.toString(value, "application/octet-stream"),
+    }),
+    fieldName: input({
+      label: "File Field Name",
+      type: "string",
+      required: false,
+      default: "file",
+      comments: "Form field name for the file part",
+      clean: (value): string => util.types.toString(value, "file"),
+    }),
+    additionalFields: input({
+      label: "Additional Fields",
+      type: "jsonForm",
+      required: false,
+      comments: "Key-value pairs to include as additional form fields",
     }),
   },
 });

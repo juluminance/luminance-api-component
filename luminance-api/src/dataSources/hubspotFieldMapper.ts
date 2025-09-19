@@ -146,13 +146,13 @@ export const hubspotFieldMapping = dataSource({
       }
       const annTypes = (await annTypesRes.json()) as any[];
 
-      // Prefer hubspot-specific annotations if present and toggle enabled
+      // Prefer hubspot-specific annotations if toggle enabled (strict: no fallback)
       const applyHsFilter = (util.types.toString(params.filterHsOnly) || "true").toLowerCase() !== "false";
       const filtered = annTypes.filter((a) => {
-        const n = a?.name || "";
-        return n.startsWith("hs_") || n.startsWith("HS_");
+        const n = (a?.name ? String(a.name) : "").trim().toLowerCase();
+        return n.startsWith("hs_");
       });
-      const annotationTypesToUse = applyHsFilter ? (filtered.length > 0 ? filtered : annTypes) : annTypes;
+      const annotationTypesToUse = applyHsFilter ? filtered : annTypes;
       const luminanceTags = annotationTypesToUse.map((a) => ({
         label: a?.name || `Annotation Type ${a?.id}`,
         key: a?.id,
@@ -198,16 +198,6 @@ export const hubspotFieldMapping = dataSource({
         type: "VerticalLayout",
         elements: [
           {
-            type: "Label",
-            text: `Showing ${fieldsForForm.length} of ${allFields.length} HubSpot properties${
-              filterText ? ` (filtered by "${filterText}")` : ""
-            }. Adjust 'Property Filter' or 'Max Options' to refine the list.`,
-          },
-          {
-            type: "Label",
-            text: `Showing ${luminanceForForm.length} Luminance annotation types${applyHsFilter ? " (filtered by hs_/HS_)" : ""}. Toggle 'Filter Luminance Tags by hs_/HS_' to change.`,
-          },
-          {
             type: "Control",
             scope: "#/properties/mymappings",
             label: "HubSpot <> Luminance Field Mapper",
@@ -222,6 +212,192 @@ export const hubspotFieldMapping = dataSource({
   },
 });
 
-export default { hubspotFieldMapping };
+export const hubspotConfigFieldPicker = dataSource({
+  dataSourceType: "jsonForm",
+  display: {
+    label: "HubSpot Field Picker for Status Updates",
+    description:
+      "Let users pick HubSpot properties for updates to Luminance Statuses",
+  },
+  inputs: {
+    hubspotConnection: input({
+      label: "HubSpot Connection",
+      type: "connection",
+      required: true,
+    }),
+    hubspotObjects: input({
+      label: "HubSpot Objects",
+      type: "string",
+      required: true,
+      comments: "Comma-separated HubSpot object types (e.g., 'contacts, companies, deals')",
+    }),
+    contractTypesConfig: input({
+      label: "Contract Types (Config)",
+      type: "string",
+      required: false,
+      comments: "Config-provided contract types; overrides manual input if present.",
+    }),
+  },
+  perform: async (_context, params) => {
+    // Optional tags to map per contract type (all treated as text)
+    const optionalTags: Array<{ key: string; label: string }> = [
+      { key: "luminanceDocumentLink", label: "Luminance Document Link" },
+      { key: "luminanceStatus", label: "Luminance Status" },
+      { key: "luminanceAssignee", label: "Luminance Assignee" },
+      { key: "luminanceLastUpdated", label: "Luminance Last Updated" },
+    ];
+
+    const hubspotToken = util.types.toString(params.hubspotConnection.token?.access_token);
+    if (!hubspotToken) {
+      throw new Error("HubSpot connection is missing an access token");
+    }
+
+    // Collect properties across specified HubSpot objects
+    const objectNames = util.types
+      .toString(params.hubspotObjects)
+      .split(",")
+      .map((n) => n.trim())
+      .filter((n) => n.length > 0);
+    if (!objectNames.length) {
+      throw new Error("At least one HubSpot object must be specified");
+    }
+
+    // Parse contract types (prefer config-provided value)
+    const contractTypesSource = util.types.toString(params.contractTypesConfig);
+    const contractTypes = contractTypesSource
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+    if (!contractTypes.length) {
+      const schema: any = { type: "object", properties: {} };
+      const uiSchema = {
+        type: "VerticalLayout",
+        elements: [
+          { type: "Label", text: "Set the Contract Types config variable to configure per-contract mappings (e.g., 'NDA, MSA')." },
+        ],
+      };
+      return { result: { schema, uiSchema } };
+    }
+    const toKey = (ct: string) =>
+      ct.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "").toLowerCase();
+
+    const allFields: Array<{ objectName: string; name: string; label: string; type: string }> = [];
+    for (const objectName of objectNames) {
+      try {
+        const res = await fetch(
+          `https://api.hubapi.com/crm/v3/properties/${encodeURIComponent(objectName)}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${hubspotToken}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+        if (!res.ok) {
+          continue;
+        }
+        const json: any = await res.json();
+        const properties = Array.isArray(json?.results) ? json.results : [];
+        for (const prop of properties) {
+          allFields.push({
+            objectName,
+            name: util.types.toString(prop.name),
+            label: util.types.toString(prop.label || prop.name),
+            type: util.types.toString(prop.type || prop.fieldType || "string"),
+          });
+        }
+      } catch {
+        // Skip objects that aren't available
+      }
+    }
+
+    if (!allFields.length) {
+      throw new Error("No accessible properties found for the specified HubSpot objects");
+    }
+
+    // Build JSON Form schema with per-contract-type pickers
+    const mappingProperties: Record<string, any> = {};
+    const defaultMappings: Record<string, any> = {};
+    const requiredMatterIds: string[] = [];
+
+    for (const ct of contractTypes) {
+      const ctKey = toKey(ct);
+      const matterFieldKey = `matterId_${ctKey}`;
+
+      // Required Matter ID per contract type
+      mappingProperties[matterFieldKey] = {
+        type: "string",
+        title: `Matter ID (${ct})`,
+        oneOf: allFields.map((field) => ({
+          title: `${field.label} (${field.objectName})`,
+          const: JSON.stringify({
+            fieldKey: field.name,
+            objectName: field.objectName,
+            fieldType: field.type,
+            isCustom: false,
+          }),
+        })),
+      };
+      requiredMatterIds.push(matterFieldKey);
+
+      // Optional additional mappings per contract type
+      for (const tag of optionalTags) {
+        const tagKey = `${tag.key}_${ctKey}`;
+        mappingProperties[tagKey] = {
+          type: ["string", "null"],
+          title: `${tag.label} (${ct})`,
+          default: null,
+          oneOf: allFields.map((field) => ({
+            title: `${field.label} (${field.objectName})`,
+            const: JSON.stringify({
+              fieldKey: field.name,
+              objectName: field.objectName,
+              fieldType: field.type,
+              isCustom: false,
+            }),
+          })),
+        };
+        // Ensure optional keys appear in payload as null when not selected
+        defaultMappings[tagKey] = null;
+      }
+    }
+
+    const schema: any = {
+      type: "object",
+      properties: {
+        mappings: {
+          type: "object",
+          properties: mappingProperties,
+          required: requiredMatterIds,
+          default: defaultMappings,
+        },
+      },
+    };
+
+    const uiSchema = {
+      type: "VerticalLayout",
+      elements: contractTypes.map((ct) => {
+        const ctKey = toKey(ct);
+        return {
+          type: "Group",
+          label: `Mappings for ${ct}`,
+          elements: [
+            { type: "Control", scope: `#/properties/mappings/properties/matterId_${ctKey}`, label: `Matter ID (${ct})` },
+            ...optionalTags.map((tag) => ({
+              type: "Control",
+              scope: `#/properties/mappings/properties/${tag.key}_${ctKey}`,
+              label: `${tag.label} (${ct})`,
+            })),
+          ],
+        };
+      }),
+    };
+
+    return { result: { schema, uiSchema } };
+  },
+});
+
+export default { hubspotFieldMapping, hubspotConfigFieldPicker };
 
 

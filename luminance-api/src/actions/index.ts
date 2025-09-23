@@ -12,6 +12,7 @@ import matters from "./matters";
 import salesforceMapper from "./salesforceMapper";
 import hubspotMapper from "./hubspotMapper";
 import webhooks from "./webhooks";
+import prismatic from "./prismatic";
 
 export default {
   ...system,
@@ -25,6 +26,7 @@ export default {
   ...salesforceMapper,
   ...hubspotMapper,
   ...webhooks,
+  ...prismatic,
   filterOutSpecificTags,
   createLuminanceMatterTagPayload,
   createInitialMatterPayload,

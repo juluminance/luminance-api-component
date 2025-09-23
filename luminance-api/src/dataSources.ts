@@ -1,10 +1,16 @@
 import { type Element, dataSource, input, util } from "@prismatic-io/spectral";
 import { createClient } from "./client";
+import { createPrismaticClient } from "./prismatic/client";
 import salesforceFieldMapper from "./dataSources/salesforceFieldMapper";
 import hubspotFieldMapper from "./dataSources/hubspotFieldMapper";
 
 interface Project {
   id: number | string;
+  name: string;
+}
+
+interface PrismaticInstanceOption {
+  id: string;
   name: string;
 }
 
@@ -110,10 +116,76 @@ export const selectWorkflow = dataSource({
   },
 });
 
+export const selectPrismaticInstance = dataSource({
+  display: {
+    label: "Select Another Instance",
+    description: "List instances as a dropdown",
+  },
+  dataSourceType: "picklist",
+  inputs: {
+    connection: input({
+      label: "Connection",
+      type: "connection",
+      required: true,
+    }),
+    customerId: input({
+      label: "Customer ID (optional)",
+      type: "string",
+      required: false,
+    }),
+    apiBaseUrl: input({
+      label: "API Base URL (override)",
+      type: "string",
+      required: false,
+      comments: "Optional. Set if connection lacks apiBaseUrl and invokeUrl is unavailable.",
+    }),
+    authRefreshPath: input({
+      label: "Auth Refresh Path (override)",
+      type: "string",
+      required: false,
+      comments: "Optional. Defaults to /auth/refresh",
+    }),
+  },
+  perform: async (context, { connection, customerId, apiBaseUrl, authRefreshPath }) => {
+    const connectionOverride = {
+      ...(connection as any),
+      fields: {
+        ...((connection as any)?.fields || {}),
+        ...(apiBaseUrl ? { apiBaseUrl } : {}),
+        ...(authRefreshPath ? { authRefreshPath } : {}),
+      },
+    } as any;
+
+    const client = await createPrismaticClient(connectionOverride, context as any);
+
+    const hasCustomer = Boolean(customerId);
+    const query = hasCustomer
+      ? `query ListInstances($customer: ID) {\n  instances(customer: $customer) {\n    nodes { id name }\n  }\n}`
+      : `query ListInstances {\n  instances {\n    nodes { id name }\n  }\n}`;
+
+    const variables = hasCustomer ? { customer: customerId } : undefined;
+    const { data } = await client.post<{ data?: { instances?: { nodes?: PrismaticInstanceOption[] } } }>(
+      "/api",
+      { query, variables }
+    );
+
+    const nodes: PrismaticInstanceOption[] = data?.data?.instances?.nodes || [];
+    const options: Element[] = nodes.map((n) => ({ key: util.types.toString(n.id), label: util.types.toString(n.name) }));
+    return { result: options };
+  },
+  examplePayload: {
+    result: [
+      { key: "inst_123", label: "Instance A" },
+      { key: "inst_456", label: "Instance B" },
+    ],
+  },
+});
+
 export default { 
   selectProject, 
   selectFolder, 
   selectWorkflow,
+  selectPrismaticInstance,
   ...salesforceFieldMapper,
   ...hubspotFieldMapper
 };

@@ -170,11 +170,16 @@ export const selectPrismaticInstance = dataSource({
     );
 
     const nodes: PrismaticInstanceOption[] = data?.data?.instances?.nodes || [];
-    const options: Element[] = nodes.map((n) => ({ key: util.types.toString(n.id), label: util.types.toString(n.name) }));
+    const defaultOption: Element = { key: "none", label: "No other integration required" };
+    const options: Element[] = [
+      defaultOption,
+      ...nodes.map((n) => ({ key: util.types.toString(n.id), label: util.types.toString(n.name) })),
+    ];
     return { result: options };
   },
   examplePayload: {
     result: [
+      { key: "none", label: "No other integration required" },
       { key: "inst_123", label: "Instance A" },
       { key: "inst_456", label: "Instance B" },
     ],
